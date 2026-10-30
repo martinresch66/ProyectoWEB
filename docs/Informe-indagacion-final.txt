@@ -1,0 +1,183 @@
+﻿Informe de Indagación Previa y Marco de Referencia
+Proyecto: Sistema de Gestión de Convenios de la Universidad Nacional de La Pampa (UNLPam)
+
+
+Asignaturas: Programación Orientada a la Web (POW) & Laboratorio de Dispositivos Móviles 
+
+
+Ubicación en Repositorio: /docs/informe-indagacion.md
+
+
+1. Relevamiento y Comparativa de Sistemas de Referencia
+Para fundamentar la arquitectura, el modelo de datos y el flujo de usabilidad del nuevo sistema institucional de la UNLPam, se analizaron de manera integral dos plataformas de gestión documental e institucional referentes en el Sector Público Nacional y en el sistema universitario argentino: SUDOCU y GDE.
+
+
+A. Sistema 1: SUDOCU (Sistema Único Documental - SIU / UNGS)
+* Propósito: Gestión integral de documentos, expedientes y trámites administrativos en universidades públicas argentinas.
+* * Integración e Identidad: Conexión nativa con SIU-Araí para autenticación unificada (IdP), gestión centralizada de usuarios y firma electrónica/digital, así como con SIU-Guaraní para la administración de datos académicos y pasantías.
+* * Estructura Documental: Diferenciación entre documentos simples (Memos, Notas) y contenedores administrativos (Expedientes y Trámites).
+* * Fortalezas:
+* 
+   * Flujos rígidos de control de estados (Borrador, En Revisión, Cerrado / Autorizado).
+   *    * Trazabilidad de acciones (registro de creador, modificador, autorizante y marca temporal).
+   *    * Vinculación de documentos mediante relaciones jerárquicas y de antecedente (Anexos, Modificatorios, Inclusiones).
+   * B. Sistema 2: GDE (Gestión Documental Electrónica - SPN Argentina)
+   * Propósito: Sistema integrado de caratulación, numeración, seguimiento y registración de movimientos de todas las actuaciones y expedientes del Sector Público Nacional.
+   *    * Módulos Oficiales Relevados:
+   * 
+      * Escritorio Único (EU): Interfaz unificada que actúa como la cara visible del sistema. Muestra el resumen de tareas pendientes del agente organizadas por antigüedad en días, permitiendo visualizar tanto tareas propias como de supervisados.
+      *       * Comunicaciones Oficiales (CCOO): Generación, registro y circulación de comunicaciones oficiales comunicables.
+      *       * Generador Electrónico de Documentos Oficiales (GEDO): Medio centralizado de creación, registro y archivo de documentos digitales.
+      *       * Expediente Electrónico (EE): Caratulación, vinculación de documentos, pases y consultas de expedientes electrónicos.
+      *       * Porta Firma (PF): Administración y ejecución de firma digital/electrónica, habilitando la firma masiva por lotes de documentos.
+      *       * Trámites a Distancia (TAD): Plataforma de recepción electrónica para la interacción con personas físicas o jurídicas externas.
+      *       * Registros Legajo Multipropósito (RLM) y LOYS: Administración de registros oficiales y tramitación de contrataciones de servicios personales sin relación de empleo.
+      *       * Fortalezas Impartidas:
+      * 
+         * Uso de firma electrónica/digital masiva y validación mediante sumas de verificación e integridad (SHA-256).
+         *          * Panel unificado de tareas por antigüedad que evita el estancamiento de trámites.
+         *          * Almacenamiento seguro y privado con restricción estricta de acceso.
+         * C. Comparativa y Oportunidades de Mejora para la UNLPam
+         * Dominio Específico:
+         * 
+            * SUDOCU / GDE: Genérico para cualquier trámite o expediente administrativo general.
+            *             * Solución UNLPam: Especializado exclusivamente en convenios marco, específicos, adendas, renovaciones y pasantías.
+            *             * Relación de Antecedentes:
+            * 
+               * SUDOCU / GDE: Agrupación en expedientes contenedores complejos.
+               *                * Solución UNLPam: Vinculación explícita en la tabla vinculos_convenio (marco-específico, adenda-modificado) sin alterar el registro anterior.
+               *                * Alertas y Plazos:
+               * 
+                  * SUDOCU / GDE: Consulta manual en bandejas de tareas o avisos de vencimiento genéricos.
+                  *                   * Solución UNLPam: Cálculo automático de plazos de vencimiento, preavisos y notificaciones (Web y Push/Local Móvil).
+                  *                   * Movilidad y Offline:
+                  * 
+                     * SUDOCU / GDE: Requiere conectividad continua y dedicada a la red institucional.
+                     *                      * Solución UNLPam: Persistencia local (IndexedDB en Web y SQLite/AsyncStorage en Móvil) con cola de operaciones diferidas.
+                     *                      * Consultas Rápidas:
+                     * 
+                        * SUDOCU / GDE: Acceso exclusivamente mediante cliente web autenticado en escritorio.
+                        *                         * Solución UNLPam: Acceso exprés mediante lector QR integrado con referencia segura y geolocalización optativa por sede.
+                        * 2. Modelo de Datos, Actores y Matriz de Permisos
+A. Definición de Actores y Alcance
+                        1. Administración: Gestión global de usuarios, unidades académicas/administrativas, parámetros del sistema y auditoría de accesos/descargas.
+                        2.                         3. Gestión: Creación de borradores de convenios, carga de adendas, registro de partes firmantes y pasantes asociados. Su alcance está restringido a su Unidad Académica asignada o Alcance Global (si unidad_id es nulo).
+                        4.                         5. Revisión: Evaluación de instrumentos enviados a revisión. Permite aprobar o devolver con observaciones fundamentadas de trámite.
+                        6.                         7. Consulta: Acceso de solo lectura a convenios vigentes o archivados, búsquedas y paneles estadísticos según su alcance autorizado.
+                        8. B. Matriz de Permisos (Rol x Acción x Alcance)
+Acción / Recurso
+	Administración (Global)
+	Gestión (Unidad / Global)
+	Revisión (Unidad / Global)
+	Consulta (Unidad / Global)
+	Crear / Editar Borrador
+	Sí
+	Sí (Su unidad)
+	No
+	No
+	Solicitar Revisión
+	Sí
+	Sí (Su unidad)
+	No
+	No
+	Aprobar / Devolver Trámite
+	Sí
+	No
+	Sí (Asignados)
+	No
+	Registrar Firma / Activar
+	Sí
+	Sí (Su unidad)
+	No
+	No
+	Ver Fichas y PDFs
+	Todos
+	Su Unidad
+	Asignados
+	Solo Vigentes
+	Descargar Reportes CSV
+	Sí (Completo)
+	Sí (Su unidad)
+	Sí (Asignados)
+	Sí (Sanitizado)
+	Auditoría del Sistema
+	Sí
+	No
+	No
+	No
+	¿Qué significan los paréntesis en cada caso?
+1. (Global)
+                        * Significado: Abarca a toda la universidad.
+                        * Ejemplo: El administrador tiene alcance global. Puede ver, crear o editar convenios de Ingeniería, Agronomía, Ciencias Exactas o Rectorado sin ninguna restricción.
+2. (Su unidad)
+                        * Significado: Restringido únicamente a la facultad o área a la que pertenece ese usuario.
+                        * Ejemplo: Si un usuario con rol Gestión pertenece a la Facultad de Ingeniería, solo puede crear o editar convenios donde unidad_id sea Ingeniería. Si intenta tocar un convenio de Agronomía, el sistema le bloquea el acceso.
+3. (Asignados)
+                        * Significado: Solo sobre los convenios que le fueron enviados específicamente a él para revisar.
+                        * Ejemplo: Un usuario con rol Revisión solo puede aprobar o devolver los trámites que entraron a su bandeja de entrada de revisión, no los de otros revisores.
+4. (Solo Vigentes)
+                        * Significado: Filtro por estado del convenio.
+                        * Ejemplo: Un usuario con rol Consulta (por ejemplo, un estudiante o público) solo puede ver fichas y PDFs de convenios que ya estén firmados y activos. No puede ver borradores ni convenios que estén en revisión.
+5. (Completo) vs (Sanitizado)
+                        * Significado: Cantidad y nivel de detalle de la información que se descarga en Excel/CSV.
+                        * (Completo): El administrador descarga el reporte con todos los campos, incluyendo historial de auditoría, observaciones internas y correos.
+                        * (Sanitizado): El usuario de consulta descarga el reporte, pero el sistema oculta o limpia datos sensibles o de uso puramente interno.
+
+
+
+
+C. Reglas de Negocio del Modelo
+                        * Partes Firmantes: No se aprueba ningún convenio que cuente con menos de 2 partes registradas en la tabla partes_convenio.
+                        *                         * Adendas y Renovaciones: Se registran como instrumentos completamente NUEVOS en la tabla convenios con su propio código. Su vinculación a través de vinculos_convenio NO modifica el registro antecedente.
+                        *                         * Documentación Adjunta: Formato exclusivo PDF, tamaño máximo 20 MB, almacenamiento en storage privado registrado en documentos, cálculo obligatorio de hash_sha256 e historial de versiones previas. Descarga únicamente mediante endpoint autenticado.
+                        *                         * Pasantías: Módulo detallado en la tabla detalles_pasantia con datos de carrera, tutor, carga horaria, asignación estímulo y cobertura de seguro.
+                        *                         * Protección CSV: Neutralización de celdas que inicien con =, +, - o @ para prevenir inyección de fórmulas.
+                        * 3. Circuito de Estados y Trazabilidad
+El ciclo de vida de un instrumento respeta el siguiente flujo de estados:
+
+
+[Borrador] --> (Solicitar Revisión) --> [Revisión] --> (Aprobar) --> [Aprobado] --> [Firmado] --> [Rescindido / Archivado]
+
+
+(En caso de observaciones en el estado de Revisión, se registra el motivo en observaciones_revision y el trámite regresa a Borrador).
+
+
+                        1. Borrador: Carga inicial de datos, metadatos, partes y documentación PDF.
+                        2.                         3. Revisión: Evaluación por parte del equipo revisor.
+                        4. 
+                           * Devolución: En caso de inconsistencias, se registra el fundamento en observaciones_revision y se regresa a Borrador.
+                           *                            5. Aprobado: Conformidad técnica y legal otorgada.
+                           6.                            7. Firmado: Instrumento suscripto formalmente por las partes. Se activan las alertas de vigencia y preaviso.
+                           8.                            9. Rescindido / Archivado: Cierre de vigencia por vencimiento, sustitución o resolución de rescisión.
+                           10. Todas las transiciones de estado quedan registradas con carácter inmutable en la tabla transiciones_estado con indicación de estado previo, estado nuevo, motivo, usuario y fecha.
+
+
+4. Análisis de Usabilidad, Accesibilidad y Privacidad
+A. Criterios de Accesibilidad (WCAG 2.1)
+                           * Controles y Formularios: Todos los campos poseen etiquetas <label> asociadas explícitamente a sus controles de entrada.
+                           *                            * Navegación por Teclado: Foco visible claramente delimitado y secuencia de tabulación lógica en todas las pantallas web.
+                           *                            * Diseño Adaptativo y Contraste: Soporte para Modo Claro y Modo Oscuro en la aplicación móvil con ratios de contraste superiores a 4.5:1 para texto normal.
+                           * B. Usabilidad (ISO 9241-210)
+                           * Interfaz dividida en pasos claros para la carga de convenios complejos.
+                           *                            * Estados vacíos informativos ("No se encontraron convenios registrados").
+                           *                            * Retroalimentación inmediata ante acciones del usuario mediante notificaciones registradas en la tabla notificaciones.
+                           * C. Privacidad y Seguridad
+                           * Datos Ficticios: Uso exclusivo de datos sintéticos en entornos de desarrollo y pruebas.
+                           *                            * Descarga Segura: Archivos PDF servidos mediante streaming autenticado desde la tabla documentos; prohibición de enlaces públicos directos.
+                           *                            * Uso Optativo de Geolocalización: Solicitud explícita de permiso sin rastreo continuo, con alternativa de selección manual de sede.
+                           * 5. Arquitectura de Software, Persistencia Offline y Concurrencia
+A. Arquitectura de Comunicación
+API REST única centralizada en Laravel 11 consumida por el Cliente Web (Next.js) y la App Móvil (React Native con Expo).
+
+
+  
+
+B. Persistencia Offline y Sincronización
+                           * Cliente Web: Uso de IndexedDB a través de Dexie.js para almacenar copias locales de fichas consultadas y mantener una cola de operaciones pendientes.
+                           *                            * Cliente Móvil: Uso de SQLite / AsyncStorage para la consulta de fichas fuera de línea y lectura QR sin conexión.
+                           *                            * Sincronización: Al recuperar la conexión, las operaciones diferidas se procesan secuencialmente contra la API REST.
+                           * C. Control de Concurrencia Optimista
+                           * Cada registro en la tabla convenios posee un campo incremental version.
+                           *                            * Toda petición de edición (PUT /api/convenios/{id}) debe enviar la versión actual que posee el cliente.
+                           *                            * Si el número de versión enviado no coincide con el guardado en la base de datos (debido a la edición previa por parte de otro usuario), la API responde con un código HTTP 409 Conflict.
+                           *                            * Las aplicaciones Web y Móvil presentan una pantalla de resolución de conflictos para que el usuario determine qué versión prevalece.

@@ -1,0 +1,106 @@
+## Desglose Detallado por Tabla y Atributos
+
+### 1. `unidades`
+
+Almacena las facultades, rectorado o dependencias de la universidad(distintas facultades, secretarías u oficinas administrativas
+ que integran la UNLPam y que tienen la capacidad de tramitar, gestionar o ser responsables de un convenio.).
+
+* `id`: Clave primaria numérica autoincremental.
+* `nombre`: Nombre oficial de la unidad académica o dependencia.
+* `codigo`: Sigla única (ej: "ING" para Ingeniería).
+* `descripcion`: Detalle funcional sobre el área.
+
+### 2. `usuarios`
+
+Mantiene la información de autenticación y los permisos del personal.
+
+* `unidad_id`: Clave foránea hacia `unidades`. Si es `NULL`, indica que el usuario posee alcance global a nivel universidad (Administrador).
+* `email`: Identificador único de acceso.
+* `clave`: Contraseña procesada mediante algoritmos de hashing seguros.
+* `rol`: Define los accesos según la matriz de permisos (`admin`, `gestion`, `revision`, `consulta`).
+* `activo`: Bandera lógica para deshabilitar usuarios sin borrar su historial.
+
+### 3. `convenios`
+
+Es el núcleo central donde se guardan los instrumentos institucionales.
+
+* `codigo`: Identificador alfanumérico único para búsquedas y códigos QR.
+* `tipo`: Define la naturaleza del trámite (`marco`, `especifico`, `adenda`, `pasantia`).
+* `estado`: Estado actual en el ciclo de vida (`borrador`, `revision`, `aprobado`, `firmado`, `rescindido`, `archivado`).
+* `unidad_id`: Unidad que gestiona y administra el convenio.
+* `fecha_inicio` y `fecha_fin`: Definen el periodo de vigencia. Un valor `fecha_fin` nulo representa trámites sin fecha de caducidad explícita.
+* `dias_preaviso`: Margen temporal previo al vencimiento para activar alertas.
+* `version`: Campo número entero que incrementa con cada actualización para soportar el control de concurrencia optimista (devuelve error HTTP 409 ante colisiones de edición).
+* `creado_por`: Usuario de rol `gestion` o `admin` que registró el borrador.
+
+### 4. `partes` y 5. `partes_convenio`
+
+Administran las instituciones o empresas externas e internas firmantes.
+
+* `partes.cuit_cuil` y `tipo_personeria`: Permiten clasificar si es una persona jurídica (empresa, municipio) o física.
+* `partes_convenio`: Tabla de enlace muchos a muchos (N:M). Garantiza la regla de negocio que exige **al menos 2 partes registradas** por convenio antes de ser aprobado.
+
+### 6. `personas` y 7. `personas_convenio`
+
+Gestiona a las personas físicas intervinientes (firmantes, representantes legales, tutores, estudiantes).
+
+* `personas.dni`: Identificador único de la persona.
+* `personas_convenio`: Asocia una persona a un convenio específico indicando su función (`rol`).
+
+### 8. `detalles_pasantia`
+
+Extensión de datos que se completa únicamente cuando `convenios.tipo = 'pasantia'`.
+
+* `convenio_id`: Clave foránea única que establece una relación 1 a 1 con la tabla `convenios`.
+* `estudiante_persona_id`, `tutor_academico_persona_id`, `tutor_institucion_persona_id`: Vinculaciones con la tabla `personas`.
+* `carrera`, `horas_semanales`, `monto_estimulo`: Datos académicos y operativos requeridos de la pasantía.
+* `aseguradora`, `numero_poliza`: Garantiza el registro obligatorio de la cobertura de seguro contra accidentes.
+
+### 9. `vinculos_convenio`
+
+Permite relacionar acuerdos derivados sin modificar ni alterar el convenio original.
+
+* `convenio_origen_id`: El instrumento nuevo que se está dando de alta (ej: una Adenda o Convenio Específico).
+* `convenio_destino_id`: El instrumento antecedente al que hace referencia (ej: el Convenio Marco previo).
+* `tipo_vinculo`: Especifica el motivo de la relación (`especifico_de`, `adenda_de`, `renovacion_de`, `sustitucion_de`).
+
+### 10. `documentos`
+
+Controla la carga de archivos digitales PDF adjuntos.
+
+* `ruta_archivo`: Ubicación dentro del almacenamiento privado del servidor (`storage/app/private/`), impidiendo el acceso público directo por URL.
+* `tamano_bytes`: Garantiza la restricción de subida (máximo 20 MB).
+* `hash_sha256`: Código hash de 64 caracteres hexadecimales generado al subir el archivo para validar que el contenido no ha sido modificado o alterado.
+* `version`: Permite conservar un historial de los PDFs cargados previamente.
+
+### 11. `transiciones_estado`
+
+Bitácora estricta de auditoría sobre el circuito administrativo.
+
+* `estado_anterior` y `estado_nuevo`: Refleja el cambio en el flujo.
+* `motivo`: Explicación o fundamento de la acción (por ejemplo, resolución o motivo de paso a firmado).
+* `cambiado_por`: Usuario autorizante de la transición.
+
+### 12. `observaciones_revision`
+
+Registra las correcciones emitidas durante la etapa de evaluación.
+
+* `usuario_revisor_id`: Revisor que detectó la inconsistencia.
+* `observacion`: Texto con las modificaciones que el equipo de gestión debe subsanar.
+* `esta_resuelta`: Indicador booleano que cambia a `1` una vez corregido el borrador.
+
+### 13. `registros_auditoria`
+
+Bitácora de seguridad del sistema.
+
+* `accion`: Evento registrado (`descarga_pdf`, `login`, `modificacion_convenio`).
+* `direccion_ip` y `agente_usuario`: Rastro técnico de red y dispositivo.
+* `detalles`: Objeto JSON con el estado de los datos antes y después del cambio.
+
+### 14. `notificaciones`
+
+Módulo de mensajería interna.
+
+* `usuario_id`: Usuario receptor del aviso.
+* `titulo` y `mensaje`: Contenido de alertas como vencimientos próximos o asignación de trámites para revisar.
+* `leida`: Estado de lectura por parte del usuario.
