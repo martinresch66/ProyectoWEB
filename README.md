@@ -1,6 +1,6 @@
 # Sistema de Gestión de Convenios - UNLPam
 
-Trabajo Práctico Integrador Final para las asignaturas **Programación Orientada a la Web (POW)** y **Laboratorio de Aplicaciones Móviles (LDMOV)** — Universidad Nacional de La Pampa (2026).
+Trabajo Práctico Integrador Final para las asignaturas **Programación Orientada a la Web (POW)** y **Laboratorio de Aplicaciones Móviles ** — Universidad Nacional de La Pampa (2026).
 
 Plataforma multiplataforma institucional para la administración, firma, seguimiento, control de vencimientos y auditoría de convenios marco, específicos, adendas y pasantías.
 
