@@ -11,21 +11,21 @@ CONTENIDO ESPERADO
 - diccionario.md      (o referencia a /docs/diccionario-datos.md)
 
 TABLAS PRINCIPALES
-users, units, agreements, parties, agreement_parties, people,
-agreement_people, internship_details, agreement_links, documents,
-status_transitions, review_observations, audit_logs, notifications
+usuarios, unidades, convenios, partes, partes_convenio, personas,
+personas_convenio, detalles_pasantia, vinculos_convenio, documentos,
+transiciones_estado, observaciones_revision, registros_auditoria, notificaciones
 
 DECISIONES DE MODELADO
-- agreements.code es UNICO.
-- agreements.version se incrementa en cada edición (concurrencia optimista).
-- agreement_links relaciona instrumentos (específico>marco, adenda>modificado,
+- convenios.codigo es UNICO.
+- convenios.version se incrementa en cada edición (concurrencia optimista).
+- vinculos_convenio relaciona instrumentos (específico>marco, adenda>modificado,
   renovación/sustitución>antecedente) sin alterar el registro anterior.
-- documents guarda tipo, ruta privada, tamaño, hash SHA-256 y versión; las
+- documentos guarda tipo, ruta privada, tamaño, hash SHA-256 y versión; las
   cargas anteriores se conservan.
 - Fechas de vencimiento nulas = "sin vencimiento registrado".
-- status_transitions registra estado anterior/nuevo, fundamento, usuario y fecha.
-- audit_logs registra acciones relevantes y descargas.
-- users.unit_id nulo = alcance global.
+- transiciones_estado registra estado anterior/nuevo, fundamento, usuario y fecha.
+- registros_auditoria registra acciones relevantes y descargas.
+- usuarios.unidad_id nulo = alcance global.
 
 CREACION DESDE CERO
 1. mysql -u root -p -e "CREATE DATABASE convenios_unlpam CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
