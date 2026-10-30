@@ -1,0 +1,18 @@
+# Node / Next / Mobile
+**/node_modules/
+**/.next/
+**/.expo/
+**/dist/
+
+# Laravel / PHP
+**/vendor/
+**/storage/*.key
+**/storage/app/private/
+
+# Entorno y Secretos
+**/.env
+**/.env.local
+
+# Sistema
+.DS_Store
+Thumbs.db
