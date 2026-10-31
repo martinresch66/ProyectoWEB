@@ -1,0 +1,48 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "API Convenios UNLPam",
+        "description": "Documentación interactiva de la API REST para el Sistema de Gestión de Convenios UNLPam",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000/api/v1",
+            "description": "Servidor Local de Desarrollo"
+        }
+    ],
+    "paths": {
+        "/ping": {
+            "get": {
+                "tags": [
+                    "Estado"
+                ],
+                "summary": "Verificar estado de la API",
+                "operationId": "3e78f4bbf9243977176ffbd3c6db5ea9",
+                "responses": {
+                    "200": {
+                        "description": "API activa y respondiendo correctamente"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Ingrese el token devuelto al iniciar sesión",
+                "name": "Authorization",
+                "in": "header",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Estado",
+            "description": "Estado"
+        }
+    ]
+}

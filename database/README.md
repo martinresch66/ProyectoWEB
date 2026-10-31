@@ -7,7 +7,7 @@ Contener los recursos para crear y poblar la base de datos desde cero.
 CONTENIDO ESPERADO
 - schema.sql          Script completo de creación de tablas
 - seeds.sql           Datos FICTICIOS de prueba
-- diagrama-er.png     Diagrama entidad-relación
+- DER.png             Diagrama entidad-relación
 - diccionario.md      (o referencia a /docs/diccionario-datos.md)
 
 TABLAS PRINCIPALES
