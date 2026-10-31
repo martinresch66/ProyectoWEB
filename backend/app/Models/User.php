@@ -2,48 +2,63 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'users';
+
+    // Desactivamos los timestamps predeterminados de Laravel para usar los del esquema
+    public $timestamps = false;
+
+    const CREATED_AT = 'creado_en';
+    const UPDATED_AT = 'actualizado_en';
+
     protected $fillable = [
-        'name',
+        'nombre',
         'email',
-        'password',
+        'clave',
+        'rol',
+        'unidad_id',
+        'activo',
+        'creado_en',
+        'actualizado_en',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
+        'clave',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'activo' => 'boolean',
+            'creado_en' => 'datetime',
+            'actualizado_en' => 'datetime',
         ];
+    }
+
+    /**
+     * Indicamos a Laravel que la contraseña se almacena en la columna 'clave'
+     * en lugar de 'password'.
+     */
+    public function getAuthPassword()
+    {
+        return $this->clave;
+    }
+
+    /**
+     * Relación con la unidad académica a la que pertenece el usuario.
+     */
+    public function unidad()
+    {
+        return $this->belongsTo(Unidad::class, 'unidad_id');
     }
 }
