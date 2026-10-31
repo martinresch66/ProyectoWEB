@@ -1,0 +1,135 @@
+Usamos esta herramienta para realizarlo https://mermaid.live/edit
+con este script
+
+
+erDiagram
+    unidades ||--o{ usuarios : "posee"
+    unidades ||--o{ convenios : "gestiona"
+    usuarios ||--o{ convenios : "crea"
+    
+    convenios ||--o{ partes_convenio : "tiene"
+    partes ||--o{ partes_convenio : "integra"
+    
+    convenios ||--o{ personas_convenio : "vincula"
+    personas ||--o{ personas_convenio : "asociada"
+    
+    convenios ||--|| detalles_pasantia : "extiende"
+    personas ||--o{ detalles_pasantia : "estudiante"
+    personas ||--o{ detalles_pasantia : "tutor_academico"
+    personas ||--o{ detalles_pasantia : "tutor_institucion"
+    
+    convenios ||--o{ vinculos_convenio : "origen"
+    convenios ||--o{ vinculos_convenio : "destino"
+    
+    convenios ||--o{ documentos : "adjunta"
+    usuarios ||--o{ documentos : "sube"
+    
+    convenios ||--o{ transiciones_estado : "registra"
+    usuarios ||--o{ transiciones_estado : "ejecuta"
+    
+    convenios ||--o{ observaciones_revision : "recibe"
+    usuarios ||--o{ observaciones_revision : "emite"
+    
+    usuarios ||--o{ registros_auditoria : "genera"
+    usuarios ||--o{ notificaciones : "recibe"
+
+    unidades {
+        bigint id PK
+        string nombre
+        string codigo
+    }
+
+    usuarios {
+        bigint id PK
+        bigint unidad_id FK
+        string email
+        enum rol
+    }
+
+    convenios {
+        bigint id PK
+        string codigo UK
+        enum tipo
+        enum estado
+        bigint unidad_id FK
+        int version
+        bigint creado_por FK
+    }
+
+    partes {
+        bigint id PK
+        string nombre
+        string cuit_cuil
+    }
+
+    partes_convenio {
+        bigint id PK
+        bigint convenio_id FK
+        bigint parte_id FK
+    }
+
+    personas {
+        bigint id PK
+        string dni UK
+        string nombre
+        string apellido
+    }
+
+    personas_convenio {
+        bigint id PK
+        bigint convenio_id FK
+        bigint persona_id FK
+        string rol
+    }
+
+    detalles_pasantia {
+        bigint id PK
+        bigint convenio_id FK "Único"
+        bigint estudiante_persona_id FK
+        string carrera
+        int horas_semanales
+    }
+
+    vinculos_convenio {
+        bigint id PK
+        bigint convenio_origen_id FK
+        bigint convenio_destino_id FK
+        enum tipo_vinculo
+    }
+
+    documentos {
+        bigint id PK
+        bigint convenio_id FK
+        string ruta_archivo
+        string hash_sha256
+        bigint subido_por FK
+    }
+
+    transiciones_estado {
+        bigint id PK
+        bigint convenio_id FK
+        enum estado_anterior
+        enum estado_nuevo
+        bigint cambiado_por FK
+    }
+
+    observaciones_revision {
+        bigint id PK
+        bigint convenio_id FK
+        bigint usuario_revisor_id FK
+        boolean esta_resuelta
+    }
+
+    registros_auditoria {
+        bigint id PK
+        bigint usuario_id FK
+        string accion
+        json detalles
+    }
+
+    notificaciones {
+        bigint id PK
+        bigint usuario_id FK
+        string titulo
+        boolean leida
+    }

@@ -45,4 +45,3 @@ CONTENIDO ESPERADO
 ENTREGA FINAL
 Todo el proyecto en un .zip con el nombre:
 GRUPO_XX_APELLIDO1_APELLIDO2_APELLIDO3.zip
-(sin secretos ni datos reales).
