@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Attributes as OA;
 
@@ -45,18 +47,18 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $credentials = [
-            'email' => $request->email,
-            'password' => $request->password,
-        ];
+        // 1. Buscar al usuario en la tabla 'usuarios' por su email
+        $user = User::where('email', $request->email)->first();
 
-        if (!Auth::attempt($credentials)) {
+        // 2. Verificar que el usuario exista y que el hash en 'clave' coincida
+        if (!$user || !Hash::check($request->password, $user->clave)) {
             return response()->json(['message' => 'Credenciales inválidas'], 401);
         }
 
-        $user = Auth::user();
+        // 3. Crear el token de Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // 4. Retornar la respuesta exitosa
         return response()->json([
             'token' => $token,
             'user' => [

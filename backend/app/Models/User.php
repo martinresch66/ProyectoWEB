@@ -11,10 +11,9 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = 'users';
+    protected $table = 'usuarios'; 
 
-    // Desactivamos los timestamps predeterminados de Laravel para usar los del esquema
-    public $timestamps = false;
+    public $timestamps = true;
 
     const CREATED_AT = 'creado_en';
     const UPDATED_AT = 'actualizado_en';
@@ -46,8 +45,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Indicamos a Laravel que la contraseña se almacena en la columna 'clave'
-     * en lugar de 'password'.
+     * Indicamos a Laravel cuál es el nombre de la columna de la contraseña.
+     */
+    public function getAuthPasswordName()
+    {
+        return 'clave';
+    }
+
+    /**
+     * Retorna el valor del hash almacenado en la columna 'clave'.
      */
     public function getAuthPassword()
     {
