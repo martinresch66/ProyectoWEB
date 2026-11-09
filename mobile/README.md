@@ -13,7 +13,8 @@ Esta carpeta tiene dos proyectos:
 
 ## Cómo correrla
 
-Hacen falta **dos terminales**, las dos parada en `mobile/`.
+Hacen falta **dos terminales**, las dos paradas en la carpeta `mobile/` (`cd mobile` desde la raíz del repo).
+Si se corren desde la raíz `ProyectoWEB/`, npm crea una carpeta `api/` vacía afuera de `mobile/` y la API no arranca.
 
 **Terminal 1 — API simulada** (la primera vez, `npm install --prefix api`):
 
