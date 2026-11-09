@@ -44,3 +44,8 @@ example
 
 #env con la ip del celular
 .env
+# API simulada de mobile: sesiones guardadas en disco
+api/.data/
+
+# Configuración local de Claude Code
+.claude/launch.json
