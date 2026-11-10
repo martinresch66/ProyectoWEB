@@ -23,7 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         // Convenios
-    //Route::get('/agreements/export', [ConvenioController::class, 'exportCsv']);
+    Route::get('/agreements/export', [ConvenioController::class, 'exportCsv']);
     Route::apiResource('agreements', ConvenioController::class)->only(['index', 'show', 'store', 'update']);
     Route::post('/agreements/{id}/transitions', [ConvenioController::class, 'transition']);
     // Vínculos entre convenios (Adendas / Específicos)
@@ -31,8 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/agreements/{id}/links/{vinculoId}', [VinculoController::class, 'destroy']);
 
     // Documentos PDF
-   // Route::post('/agreements/{id}/documents', [DocumentoController::class, 'store']);
-   // Route::get('/documents/{id}/download', [DocumentoController::class, 'download']);
+   Route::post('/agreements/{id}/documents', [DocumentoController::class, 'store']);
+   Route::get('/documents/{id}/download', [DocumentoController::class, 'download']);
 
     // Observaciones de Revisión
    // Route::post('/agreements/{id}/observations', [ObservacionController::class, 'store']);

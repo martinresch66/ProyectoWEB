@@ -322,6 +322,93 @@ class ConvenioController extends Controller
         return $this->success($this->cargarFicha($id, $user), 'Estado actualizado correctamente');
     }
 
+/**
+     * GET /api/agreements/export
+     */
+    public function exportCsv(Request $request)
+    {
+        $user = $request->user();
+
+        // Aplicar la misma visibilidad por rol y los mismos filtros que en index()
+        $query = Convenio::visiblePara($user)->with(['unidad']);
+
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('codigo', 'like', "%{$q}%")
+                    ->orWhere('titulo', 'like', "%{$q}%")
+                    ->orWhere('resumen', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('unidad_id')) {
+            $query->where('unidad_id', $request->unidad_id);
+        }
+
+        if ($request->filled('desde')) {
+            $query->where('fecha_inicio', '>=', $request->desde);
+        }
+        if ($request->filled('hasta')) {
+            $query->where('fecha_inicio', '<=', $request->hasta);
+        }
+
+        $convenios = $query->orderByDesc('id')->get();
+
+        $filename = 'convenios-' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        // Función auxiliar para sanitizar celdas (requisito de seguridad del contrato)
+        $sanitizar = function ($valor) {
+            $str = (string) ($valor ?? '');
+            if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"])) {
+                return "'" . $str;
+            }
+            return $str;
+        };
+
+        $callback = function () use ($convenios, $sanitizar) {
+            $file = fopen('php://output', 'w');
+
+            // BOM UTF-8 para que Excel detecte la codificación correctamente
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Encabezados de columnas con separador punto y coma (;)
+            fputcsv($file, ['Código', 'Título', 'Tipo', 'Estado', 'Unidad Académica', 'Fecha Inicio', 'Fecha Fin'], ';');
+
+            // Filas de datos
+            foreach ($convenios as $c) {
+                // Parseo seguro de fechas para evitar error 500 en PHP
+                $inicio = $c->fecha_inicio ? \Illuminate\Support\Carbon::parse($c->fecha_inicio)->format('Y-m-d') : '-';
+                $fin    = $c->fecha_fin ? \Illuminate\Support\Carbon::parse($c->fecha_fin)->format('Y-m-d') : '-';
+
+                fputcsv($file, [
+                    $sanitizar($c->codigo),
+                    $sanitizar($c->titulo),
+                    $sanitizar(ucfirst($c->tipo)),
+                    $sanitizar(ucfirst($c->estado)),
+                    $sanitizar($c->unidad->nombre ?? 'N/A'),
+                    $inicio,
+                    $fin,
+                ], ';');
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
     // -------------------------------------------------------------------------
     // Helpers privados
     // -------------------------------------------------------------------------

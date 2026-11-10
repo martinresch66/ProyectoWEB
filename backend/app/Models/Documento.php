@@ -24,4 +24,14 @@ class Documento extends Model
         'version',
         'subido_por',
     ];
+
+    public function convenio()
+    {
+        return $this->belongsTo(Convenio::class, 'convenio_id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'subido_por');
+    }
 }
