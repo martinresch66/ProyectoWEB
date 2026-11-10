@@ -258,12 +258,8 @@ class ConvenioController extends Controller
         return $this->success($this->cargarFicha($id, $user), 'Convenio actualizado correctamente');
     }
 
-    /**
+   /**
      * POST /api/agreements/{id}/transitions
-     *
-     * NOTA: por ahora solo valida alcance, rol básico y versión.
-     * Falta la matriz de transiciones, reglas (>=2 partes, observaciones),
-     * auditoría y notificación (siguiente paso).
      */
     public function transition(Request $request, $id)
     {
@@ -279,16 +275,74 @@ class ConvenioController extends Controller
             'version'      => 'required|integer',
         ]);
 
-        $existente = Convenio::visiblePara($user)->find($id);
+        $existente = Convenio::visiblePara($user)->with(['partes', 'observaciones'])->find($id);
 
         if (!$existente) {
             return $this->error('Convenio no encontrado', 404);
         }
 
-        $estadoNuevo = $request->input('estado_nuevo');
+        $estadoActual = $existente->estado;
+        $estadoNuevo  = $request->input('estado_nuevo');
+        $rol          = $user->rol;
+
+        // Validar Matriz de Permisos y Transiciones
+        $transicionValida = false;
+
+        switch ("{$estadoActual}->{$estadoNuevo}") {
+            case 'borrador->revision':
+                $transicionValida = in_array($rol, ['admin', 'gestion']);
+                break;
+
+            case 'borrador->archivado':
+                $transicionValida = ($rol === 'admin');
+                break;
+
+            case 'revision->aprobado':
+                if (in_array($rol, ['admin', 'revision'])) {
+                    // Regla extra: al menos 2 partes y 0 observaciones sin resolver
+                    $cantPartes = $existente->partes->count();
+                    $obsPendientes = $existente->observaciones->where('esta_resuelta', false)->count();
+
+                    if ($cantPartes < 2) {
+                        return $this->error('El convenio debe tener al menos 2 partes registradas para ser aprobado', 422);
+                    }
+                    if ($obsPendientes > 0) {
+                        return $this->error('No se puede aprobar: existen observaciones pendientes sin resolver', 422);
+                    }
+                    $transicionValida = true;
+                }
+                break;
+
+            case 'revision->borrador':
+                if (in_array($rol, ['admin', 'revision'])) {
+                    // Regla extra: debe existir al menos 1 observación pendiente
+                    $obsPendientes = $existente->observaciones->where('esta_resuelta', false)->count();
+                    if ($obsPendientes === 0) {
+                        return $this->error('Para devolver a borrador debe registrar al menos una observación sin resolver', 422);
+                    }
+                    $transicionValida = true;
+                }
+                break;
+
+            case 'aprobado->firmado':
+                $transicionValida = in_array($rol, ['admin', 'gestion']);
+                break;
+
+            case 'aprobado->borrador':
+            case 'firmado->rescindido':
+            case 'firmado->archivado':
+            case 'rescindido->archivado':
+                $transicionValida = ($rol === 'admin');
+                break;
+        }
+
+        if (!$transicionValida) {
+            return $this->error("Transición de estado de '{$estadoActual}' a '{$estadoNuevo}' no permitida para su rol", 422);
+        }
+
         $conflicto = false;
 
-        DB::transaction(function () use ($id, $request, $user, $estadoNuevo, &$conflicto) {
+        DB::transaction(function () use ($id, $request, $user, $estadoNuevo, $estadoActual, &$conflicto) {
             $convenio = Convenio::lockForUpdate()->find($id);
 
             if ((int) $request->input('version') !== (int) $convenio->version) {
@@ -296,15 +350,13 @@ class ConvenioController extends Controller
                 return;
             }
 
-            $estadoAnterior = $convenio->estado;
-
             $convenio->estado = $estadoNuevo;
             $convenio->version = $convenio->version + 1;
             $convenio->save();
 
             TransicionEstado::create([
                 'convenio_id'     => $convenio->id,
-                'estado_anterior' => $estadoAnterior,
+                'estado_anterior' => $estadoActual,
                 'estado_nuevo'    => $estadoNuevo,
                 'motivo'          => $request->input('motivo'),
                 'cambiado_por'    => $user->id,

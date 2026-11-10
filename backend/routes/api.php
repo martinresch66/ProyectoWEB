@@ -34,10 +34,10 @@ Route::middleware('auth:sanctum')->group(function () {
    Route::post('/agreements/{id}/documents', [DocumentoController::class, 'store']);
    Route::get('/documents/{id}/download', [DocumentoController::class, 'download']);
 
-    // Observaciones de Revisión
-   // Route::post('/agreements/{id}/observations', [ObservacionController::class, 'store']);
-    //Route::patch('/observations/{id}', [ObservacionController::class, 'update']);
-
+   // Observaciones de Revisión
+    Route::post('/agreements/{id}/observations', [ObservacionController::class, 'store']);
+    Route::patch('/observations/{id}', [ObservacionController::class, 'update']);
+    
     // Catálogos: Unidades, Partes, Personas
     Route::get('/units', [UnidadController::class, 'index']);
 
