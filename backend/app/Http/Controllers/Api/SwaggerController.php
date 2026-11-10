@@ -38,6 +38,6 @@ class SwaggerController extends Controller
     )]
     public function ping()
     {
-        return response()->json(['status' => 'ok', 'message' => 'API Convenios UNLPam activa']);
+        return $this->success(['status' => 'ok'], 'API Convenios UNLPam activa');
     }
 }

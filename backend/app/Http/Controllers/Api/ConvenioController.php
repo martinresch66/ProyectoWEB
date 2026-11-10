@@ -4,99 +4,414 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Convenio;
+use App\Models\DetallePasantia;
+use App\Models\TransicionEstado;
+use App\Models\VinculoConvenio;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ConvenioController extends Controller
 {
     /**
-     * Muestra una lista de todos los convenios.
-     * Corresponde a la petición: GET /api/convenios
+     * GET /api/agreements
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Consultamos los convenios trayendo también los datos de la unidad y del creador
-        $convenios = Convenio::with(['unidad', 'creador'])->get();
+        $query = Convenio::visiblePara($request->user())->with(['unidad', 'creador']);
 
-        // Devolvemos la respuesta en formato JSON con un código de estado 200 OK
-        return response()->json($convenios, 200);
+        if ($request->filled('q')) {
+            $q = $request->input('q');
+            $query->where(function ($sub) use ($q) {
+                $sub->where('codigo', 'like', "%{$q}%")
+                    ->orWhere('titulo', 'like', "%{$q}%")
+                    ->orWhere('resumen', 'like', "%{$q}%");
+            });
+        }
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('unidad_id')) {
+            $query->where('unidad_id', $request->unidad_id);
+        }
+
+        if ($request->filled('desde')) {
+            $query->where('fecha_inicio', '>=', $request->desde);
+        }
+        if ($request->filled('hasta')) {
+            $query->where('fecha_inicio', '<=', $request->hasta);
+        }
+
+        // Vigencia: vigente | proximo | vencido | sin_vencimiento
+        if ($request->filled('vigencia')) {
+            $hoy = now()->toDateString();
+            switch ($request->vigencia) {
+                case 'sin_vencimiento':
+                    $query->whereNull('fecha_fin');
+                    break;
+                case 'vencido':
+                    $query->where('fecha_fin', '<', $hoy);
+                    break;
+                case 'proximo':
+                    $query->where('fecha_fin', '>=', $hoy)
+                          ->whereRaw('DATEDIFF(fecha_fin, ?) <= COALESCE(dias_preaviso, 0)', [$hoy]);
+                    break;
+                case 'vigente':
+                    $query->where('fecha_fin', '>=', $hoy)
+                          ->whereRaw('DATEDIFF(fecha_fin, ?) > COALESCE(dias_preaviso, 0)', [$hoy]);
+                    break;
+            }
+        }
+
+        $perPage = min((int) $request->input('per_page', 10), 100);
+
+        return $this->success($query->orderByDesc('id')->paginate($perPage), 'Lista de convenios obtenida correctamente');
     }
 
     /**
-     * Guarda un nuevo convenio en la base de datos.
-     * Corresponde a la petición: POST /api/convenios
+     * POST /api/agreements
      */
     public function store(Request $request)
     {
-        // 1. Validamos que los datos obligatorios vengan en la petición HTTP
+        $user = $request->user();
+
+        if (!in_array($user->rol, ['admin', 'gestion'])) {
+            return $this->error('No tiene permisos para crear convenios', 403);
+        }
+
+        if ($user->rol === 'gestion' && $request->input('unidad_id') != $user->unidad_id) {
+            return $this->error('No tiene permisos para crear convenios en otra unidad académica', 403);
+        }
+
+        // Normalizar el antecedente que manda el formulario de Next.js
+        $origenId = $request->input('convenio_origen_id')
+                 ?? $request->input('convenio_destino_id')
+                 ?? $request->input('convenio_padre_id')
+                 ?? $request->input('convenio_antecedente_id');
+
+        if ($origenId) {
+            $request->merge(['convenio_origen_id' => $origenId]);
+        }
+
+        $tipo = $request->input('tipo');
+
         $validatedData = $request->validate([
-            'codigo' => 'required|string|unique:convenios,codigo',
-            'titulo' => 'required|string|max:255',
-            'tipo' => 'required|string',
-            'estado' => 'required|string',
-            'unidad_id' => 'required|exists:unidades,id',
-            'resumen' => 'nullable|string',
-            'fecha_inicio' => 'nullable|date',
-            'fecha_fin' => 'nullable|date',
-            'dias_preaviso' => 'nullable|integer',
+            'codigo'              => 'required|string|unique:convenios,codigo',
+            'titulo'              => 'required|string|min:5|max:255',
+            'tipo'                => 'required|string|in:marco,especifico,adenda,pasantia',
+            'unidad_id'           => 'required|exists:unidades,id',
+            'resumen'             => 'nullable|string',
+            'fecha_inicio'        => 'nullable|date',
+            'fecha_fin'           => 'nullable|date|after_or_equal:fecha_inicio',
+            'dias_preaviso'       => 'nullable|integer|between:0,365',
+            'convenio_origen_id'  => 'nullable|exists:convenios,id',
+            'partes'              => 'nullable|array',
+            'personas'            => 'nullable|array',
+            'detalle_pasantia'    => 'nullable|array',
         ]);
 
-        // 2. Le asignamos el ID del usuario autenticado que realiza la carga
-        $validatedData['creado_por'] = $request->user()->id;
+        $convenio = DB::transaction(function () use ($validatedData, $user, $tipo, $request) {
+            $convenio = Convenio::create([
+                'codigo'        => $validatedData['codigo'],
+                'titulo'        => $validatedData['titulo'],
+                'tipo'          => $validatedData['tipo'],
+                'estado'        => 'borrador',
+                'unidad_id'     => $validatedData['unidad_id'],
+                'resumen'       => $validatedData['resumen'] ?? null,
+                'fecha_inicio'  => $validatedData['fecha_inicio'] ?? null,
+                'fecha_fin'     => $validatedData['fecha_fin'] ?? null,
+                'dias_preaviso' => $validatedData['dias_preaviso'] ?? 30,
+                'version'       => 1,
+                'creado_por'    => $user->id,
+            ]);
 
-        // 3. Creamos el registro en MySQL mediante Eloquent
-        $convenio = Convenio::create($validatedData);
+            // Vínculo con el antecedente, si viene
+            if (!empty($validatedData['convenio_origen_id'])) {
+                $tipoVinculo = $request->input('tipo_vinculo')
+                            ?? ($tipo === 'adenda' ? 'adenda_de' : 'especifico_de');
 
-        // Devolvemos el convenio recién creado con estado 201 Created
-        return response()->json($convenio, 201);
+                VinculoConvenio::create([
+                    'convenio_origen_id'  => $convenio->id,
+                    'convenio_destino_id' => $validatedData['convenio_origen_id'],
+                    'tipo_vinculo'        => $tipoVinculo,
+                ]);
+            }
+
+            $this->sincronizarPartes($convenio, $validatedData['partes'] ?? null);
+            $this->sincronizarPersonas($convenio, $validatedData['personas'] ?? null);
+
+            if ($tipo === 'pasantia' && !empty($validatedData['detalle_pasantia'])) {
+                $this->guardarDetallePasantia($convenio, $validatedData['detalle_pasantia']);
+            }
+
+            return $convenio;
+        });
+
+        return $this->success(
+            $this->cargarFicha($convenio->id, $user),
+            'Convenio creado correctamente',
+            201
+        );
     }
 
     /**
-     * Muestra un convenio específico por su ID.
-     * Corresponde a la petición: GET /api/convenios/{id}
+     * GET /api/agreements/{id}
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        // Busca el convenio por ID o arroja una excepción 404 Not Found automáticamente si no existe
-        $convenio = Convenio::with(['unidad', 'creador'])->findOrFail($id);
+        $convenio = $this->cargarFicha($id, $request->user());
 
-        return response()->json($convenio, 200);
+        if (!$convenio) {
+            return $this->error('Convenio no encontrado', 404);
+        }
+
+        return $this->success($convenio, 'Detalle del convenio obtenido correctamente');
     }
 
     /**
-     * Actualiza un convenio existente.
-     * Corresponde a la petición: PUT/PATCH /api/convenios/{id}
+     * PUT /api/agreements/{id}
      */
     public function update(Request $request, $id)
     {
-        $convenio = Convenio::findOrFail($id);
+        $user = $request->user();
+
+        if (!in_array($user->rol, ['admin', 'gestion'])) {
+            return $this->error('No tiene permisos para editar convenios', 403);
+        }
+
+        $existente = Convenio::visiblePara($user)->find($id);
+
+        if (!$existente) {
+            return $this->error('Convenio no encontrado', 404);
+        }
+
+        if ($existente->estado !== 'borrador') {
+            return $this->error('Solo se pueden editar convenios en estado borrador', 422);
+        }
+
+        if ($user->rol === 'gestion'
+            && $request->filled('unidad_id')
+            && (int) $request->input('unidad_id') !== (int) $user->unidad_id) {
+            return $this->error('No tiene permisos para mover el convenio a otra unidad académica', 403);
+        }
 
         $validatedData = $request->validate([
-            'codigo' => 'sometimes|string|unique:convenios,codigo,' . $id,
-            'titulo' => 'sometimes|string|max:255',
-            'tipo' => 'sometimes|string',
-            'estado' => 'sometimes|string',
-            'unidad_id' => 'sometimes|exists:unidades,id',
-            'resumen' => 'nullable|string',
-            'fecha_inicio' => 'nullable|date',
-            'fecha_fin' => 'nullable|date',
-            'dias_preaviso' => 'nullable|integer',
+            'version'          => 'required|integer',
+            'codigo'           => 'sometimes|string|unique:convenios,codigo,' . $id,
+            'titulo'           => 'sometimes|string|min:5|max:255',
+            'tipo'             => 'sometimes|string|in:marco,especifico,adenda,pasantia',
+            'unidad_id'        => 'sometimes|exists:unidades,id',
+            'resumen'          => 'nullable|string',
+            'fecha_inicio'     => 'nullable|date',
+            'fecha_fin'        => 'nullable|date|after_or_equal:fecha_inicio',
+            'dias_preaviso'    => 'nullable|integer|between:0,365',
+            'partes'           => 'nullable|array',
+            'personas'         => 'nullable|array',
+            'detalle_pasantia' => 'nullable|array',
         ]);
 
-        // Actualizamos los campos en MySQL
-        $convenio->update($validatedData);
+        $conflicto = false;
 
-        return response()->json($convenio, 200);
+        DB::transaction(function () use ($id, $validatedData, &$conflicto) {
+            // Bloqueo de fila: dos ediciones simultáneas no pasan las dos
+            $convenio = Convenio::lockForUpdate()->find($id);
+
+            if ((int) $validatedData['version'] !== (int) $convenio->version) {
+                $conflicto = true;
+                return;
+            }
+
+            $campos = collect($validatedData)
+                ->except(['version', 'partes', 'personas', 'detalle_pasantia'])
+                ->all();
+
+            $convenio->fill($campos);
+            $convenio->version = $convenio->version + 1;
+            $convenio->save();
+
+            if (array_key_exists('partes', $validatedData)) {
+                $this->sincronizarPartes($convenio, $validatedData['partes']);
+            }
+
+            if (array_key_exists('personas', $validatedData)) {
+                $this->sincronizarPersonas($convenio, $validatedData['personas']);
+            }
+
+            if ($convenio->tipo === 'pasantia' && !empty($validatedData['detalle_pasantia'])) {
+                $this->guardarDetallePasantia($convenio, $validatedData['detalle_pasantia']);
+            }
+        });
+
+        if ($conflicto) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El convenio fue modificado por otro usuario',
+                'actual'  => $this->cargarFicha($id, $user),
+            ], 409);
+        }
+
+        return $this->success($this->cargarFicha($id, $user), 'Convenio actualizado correctamente');
     }
 
     /**
-     * Elimina un convenio de la base de datos.
-     * Corresponde a la petición: DELETE /api/convenios/{id}
+     * POST /api/agreements/{id}/transitions
+     *
+     * NOTA: por ahora solo valida alcance, rol básico y versión.
+     * Falta la matriz de transiciones, reglas (>=2 partes, observaciones),
+     * auditoría y notificación (siguiente paso).
      */
-    public function destroy($id)
+    public function transition(Request $request, $id)
     {
-        $convenio = Convenio::findOrFail($id);
-        $convenio->delete();
+        $user = $request->user();
 
-        return response()->json(['message' => 'Convenio eliminado correctamente'], 200);
+        if (!in_array($user->rol, ['admin', 'gestion', 'revision'])) {
+            return $this->error('No tiene permisos para cambiar el estado de convenios', 403);
+        }
+
+        $request->validate([
+            'estado_nuevo' => 'required|string|in:borrador,revision,aprobado,firmado,rescindido,archivado',
+            'motivo'       => 'required|string|min:5',
+            'version'      => 'required|integer',
+        ]);
+
+        $existente = Convenio::visiblePara($user)->find($id);
+
+        if (!$existente) {
+            return $this->error('Convenio no encontrado', 404);
+        }
+
+        $estadoNuevo = $request->input('estado_nuevo');
+        $conflicto = false;
+
+        DB::transaction(function () use ($id, $request, $user, $estadoNuevo, &$conflicto) {
+            $convenio = Convenio::lockForUpdate()->find($id);
+
+            if ((int) $request->input('version') !== (int) $convenio->version) {
+                $conflicto = true;
+                return;
+            }
+
+            $estadoAnterior = $convenio->estado;
+
+            $convenio->estado = $estadoNuevo;
+            $convenio->version = $convenio->version + 1;
+            $convenio->save();
+
+            TransicionEstado::create([
+                'convenio_id'     => $convenio->id,
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo'    => $estadoNuevo,
+                'motivo'          => $request->input('motivo'),
+                'cambiado_por'    => $user->id,
+            ]);
+        });
+
+        if ($conflicto) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El convenio ha sido modificado por otro usuario',
+                'actual'  => $this->cargarFicha($id, $user),
+            ], 409);
+        }
+
+        return $this->success($this->cargarFicha($id, $user), 'Estado actualizado correctamente');
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers privados
+    // -------------------------------------------------------------------------
+
+    /**
+     * Carga la ficha completa respetando el alcance del usuario.
+     * Devuelve null si no existe o no está en su alcance.
+     */
+    private function cargarFicha($id, $user)
+    {
+        $convenio = Convenio::visiblePara($user)->with([
+            'unidad',
+            'creador',
+            'partes',
+            'personas',
+            'detallePasantia.estudiante',
+            'detallePasantia.tutorAcademico',
+            'detallePasantia.tutorInstitucion',
+            'vinculosOrigen.destino',
+            'vinculosDestino.origen',
+            'documentos',
+            'transiciones',
+            'observaciones',
+        ])->find($id);
+
+        // El rol consulta no debe ver datos de contacto de personas
+        if ($convenio && $user->rol === 'consulta') {
+            $convenio->personas->each->makeHidden(['dni', 'email', 'telefono']);
+
+            if ($convenio->detallePasantia) {
+                foreach (['estudiante', 'tutorAcademico', 'tutorInstitucion'] as $rel) {
+                    $convenio->detallePasantia->{$rel}?->makeHidden(['dni', 'email', 'telefono']);
+                }
+            }
+        }
+
+        return $convenio;
+    }
+
+    private function sincronizarPartes(Convenio $convenio, ?array $partes): void
+    {
+        if ($partes === null) {
+            return;
+        }
+
+        $sync = [];
+        foreach ($partes as $p) {
+            $parteId = is_array($p) ? ($p['parte_id'] ?? $p['id'] ?? null) : $p;
+            $rol = is_array($p) ? ($p['rol_en_convenio'] ?? $p['rol'] ?? null) : null;
+            if ($parteId) {
+                $sync[$parteId] = ['rol_en_convenio' => $rol];
+            }
+        }
+
+        $convenio->partes()->sync($sync);
+    }
+
+    private function sincronizarPersonas(Convenio $convenio, ?array $personas): void
+    {
+        if ($personas === null) {
+            return;
+        }
+
+        $sync = [];
+        foreach ($personas as $p) {
+            $personaId = is_array($p) ? ($p['persona_id'] ?? $p['id'] ?? null) : $p;
+            // La columna `rol` es NOT NULL en personas_convenio
+            $rol = is_array($p) ? ($p['rol'] ?? 'Sin especificar') : 'Sin especificar';
+            if ($personaId) {
+                $sync[$personaId] = ['rol' => $rol];
+            }
+        }
+
+        $convenio->personas()->sync($sync);
+    }
+
+    private function guardarDetallePasantia(Convenio $convenio, array $dp): void
+    {
+        DetallePasantia::updateOrCreate(
+            ['convenio_id' => $convenio->id],
+            [
+                'estudiante_persona_id'        => $dp['estudiante_persona_id'] ?? null,
+                'tutor_academico_persona_id'   => $dp['tutor_academico_persona_id'] ?? null,
+                'tutor_institucion_persona_id' => $dp['tutor_institucion_persona_id'] ?? null,
+                'carrera'                      => $dp['carrera'] ?? '',
+                'horas_semanales'              => $dp['horas_semanales'] ?? null,
+                'monto_estimulo'               => $dp['monto_estimulo'] ?? 0,
+                'aseguradora'                  => $dp['aseguradora'] ?? null,
+                'numero_poliza'                => $dp['numero_poliza'] ?? null,
+            ]
+        );
     }
 }

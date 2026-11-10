@@ -9,6 +9,6 @@ class UnidadController extends Controller
 {
     public function index()
     {
-        return response()->json(Unidad::all(), 200);
+        return $this->success(Unidad::all(), 'Lista de unidades académicas obtenida correctamente');
     }
 }

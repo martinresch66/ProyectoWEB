@@ -8,7 +8,6 @@ class AlertController extends Controller
 {
     public function index()
     {
-        // Retornamos un array vacío o las alertas básicas para evitar el error 404
-        return response()->json([], 200);
+        return $this->success([], 'Lista de alertas obtenida correctamente');
     }
 }
