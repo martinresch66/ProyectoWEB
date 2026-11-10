@@ -33,7 +33,9 @@ npx expo start
 Escanear el QR con **Expo Go**. El celular y la PC tienen que estar en la **misma red Wi-Fi**.
 La app busca la API sola en la misma PC que corre Expo, puerto 4000.
 
-### Usuarios de prueba (los de `database/seeds.sql`, contraseña `password123`)
+### Usuarios de prueba (los de `database/seeds.sql`, contraseña `1234`)
+
+Con la API simulada la contraseña es `1234` para entrar rápido. Contra el backend de Laravel es `password123` (la de `seeds.sql`).
 
 | Email | Rol | Qué ve |
 |---|---|---|

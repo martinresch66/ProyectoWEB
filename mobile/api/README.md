@@ -34,7 +34,7 @@ Usa el puerto **4000** para no chocar con Laravel (8000) ni con la web (3000).
 
 ## Usuarios de prueba
 
-Los del seed, todos con la contraseña **`password123`**: `admin@`, `gestion.ing@`, `revision@` y `consulta.exactas@unlpam.edu.ar`.
+Los del seed, todos con la contraseña **`1234`** (en Laravel es `password123`, la de `seeds.sql`): `admin@`, `gestion.ing@`, `revision@` y `consulta.exactas@unlpam.edu.ar`.
 El código MFA se "envía" de forma simulada: aparece en la consola de la API y la app lo muestra como notificación.
 
 ## Endpoints
