@@ -37,7 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
    // Observaciones de Revisión
     Route::post('/agreements/{id}/observations', [ObservacionController::class, 'store']);
     Route::patch('/observations/{id}', [ObservacionController::class, 'update']);
-    
+
     // Catálogos: Unidades, Partes, Personas
     Route::get('/units', [UnidadController::class, 'index']);
 
@@ -53,7 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
    // Route::put('/users/{id}', [UserController::class, 'update']);
 
     // Dashboard y Alertas
-    //Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/alerts', [AlertController::class, 'index']);
-    //Route::patch('/alerts/{id}', [AlertController::class, 'update']);
+    Route::patch('/alerts/{id}', [AlertController::class, 'update']);
 });
