@@ -14,6 +14,12 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+
+        if ($user->rol !== 'admin') {
+            return response()->json(['message' => 'No tiene permisos para ver usuarios'], 403);
+        }
+
         $query = User::with('unidad');
 
         if ($request->filled('q')) {
@@ -27,10 +33,10 @@ class UserController extends Controller
         $perPage = $request->input('per_page', 100);
         $users = $query->paginate($perPage);
 
-        // Agregamos la propiedad 'name' para que la vista renderice la columna sin fallar
-        $users->getCollection()->transform(function ($user) {
-            $user->name = $user->nombre;
-            return $user;
+        // Mapear 'name' por compatibilidad con el frontend
+        $users->getCollection()->transform(function ($u) {
+            $u->name = $u->nombre;
+            return $u;
         });
 
         return $this->success($users, 'Lista de usuarios obtenida correctamente');
@@ -41,33 +47,103 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. Si el front envió 'nombre' en vez de 'name', lo unificamos
+        if ($request->user()->rol !== 'admin') {
+            return response()->json(['message' => 'No tiene permisos para crear usuarios'], 403);
+        }
+
         if (!$request->has('name') && $request->has('nombre')) {
             $request->merge(['name' => $request->input('nombre')]);
         }
 
-        // 2. Validación según Contrato API
         $validated = $request->validate([
             'name'      => 'required|string|max:255',
             'email'     => 'required|email|unique:usuarios,email',
             'password'  => 'required|string|min:6',
             'rol'       => 'required|string|in:admin,gestion,revision,consulta',
             'unidad_id' => 'nullable|exists:unidades,id',
+            'activo'    => 'nullable|boolean',
         ]);
 
-        // 3. Creación en la tabla real de MySQL ('usuarios')
         $user = User::create([
             'nombre'    => $validated['name'],
             'email'     => $validated['email'],
             'clave'     => Hash::make($validated['password']),
             'rol'       => $validated['rol'],
             'unidad_id' => $validated['unidad_id'] ?? null,
-            'activo'    => 1,
+            'activo'    => $validated['activo'] ?? 1,
         ]);
 
         $user->load('unidad');
         $user->name = $user->nombre;
 
         return $this->success($user, 'Usuario creado exitosamente', 201);
+    }
+
+    /**
+     * PUT /api/users/{id}
+     */
+    public function update(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if ($user->rol !== 'admin') {
+            return response()->json(['message' => 'No tiene permisos para editar usuarios'], 403);
+        }
+
+        $usuario = User::find($id);
+
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        // Si el front mandó 'name', lo unificamos a 'nombre'
+        if ($request->has('name') && !$request->has('nombre')) {
+            $request->merge(['nombre' => $request->input('name')]);
+        }
+
+        $validated = $request->validate([
+            'nombre'    => 'sometimes|string|max:255',
+            'email'     => 'sometimes|email|unique:usuarios,email,' . $id, // <-- Corregido de users a usuarios
+            'password'  => 'nullable|string|min:6',
+            'rol'       => 'sometimes|string|in:admin,gestion,revision,consulta',
+            'unidad_id' => 'nullable|exists:unidades,id',
+            'activo'    => 'sometimes|boolean',
+        ]);
+
+        // Mapear campos de la base de datos MySQL real ('usuarios')
+        if (array_key_exists('nombre', $validated)) {
+            $usuario->nombre = $validated['nombre'];
+        }
+
+        if (array_key_exists('email', $validated)) {
+            $usuario->email = $validated['email'];
+        }
+
+        if (!empty($validated['password'])) {
+            $usuario->clave = Hash::make($validated['password']);
+        }
+
+        if (array_key_exists('rol', $validated)) {
+            $usuario->rol = $validated['rol'];
+        }
+
+        if (array_key_exists('unidad_id', $validated)) {
+            $usuario->unidad_id = $validated['unidad_id'];
+        }
+
+        if (array_key_exists('activo', $validated)) {
+            $usuario->activo = $validated['activo'] ? 1 : 0;
+        }
+
+        $usuario->save();
+
+        $usuario->load('unidad');
+        $usuario->name = $usuario->nombre;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Usuario actualizado correctamente',
+            'data'    => $usuario,
+        ]);
     }
 }

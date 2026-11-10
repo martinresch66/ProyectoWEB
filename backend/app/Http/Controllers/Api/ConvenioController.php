@@ -101,33 +101,55 @@ class ConvenioController extends Controller
         $tipo = $request->input('tipo');
 
         $validatedData = $request->validate([
-            'codigo'              => 'required|string|unique:convenios,codigo',
-            'titulo'              => 'required|string|min:5|max:255',
-            'tipo'                => 'required|string|in:marco,especifico,adenda,pasantia',
-            'unidad_id'           => 'required|exists:unidades,id',
-            'resumen'             => 'nullable|string',
-            'fecha_inicio'        => 'nullable|date',
-            'fecha_fin'           => 'nullable|date|after_or_equal:fecha_inicio',
-            'dias_preaviso'       => 'nullable|integer|between:0,365',
-            'convenio_origen_id'  => 'nullable|exists:convenios,id',
-            'partes'              => 'nullable|array',
-            'personas'            => 'nullable|array',
-            'detalle_pasantia'    => 'nullable|array',
+            'codigo'                 => 'required|string|unique:convenios,codigo',
+            'titulo'                 => 'required|string|min:5|max:255',
+            'tipo'                   => 'required|string|in:marco,especifico,adenda,pasantia',
+            'unidad_id'              => 'required|exists:unidades,id',
+            'resumen'                => 'nullable|string',
+            'fecha_inicio'           => 'nullable|date',
+            'fecha_fin'              => 'nullable|date|after_or_equal:fecha_inicio',
+            'dias_preaviso'          => 'nullable|integer|between:0,365',
+            'convenio_origen_id'     => 'nullable|exists:convenios,id',
+            'partes'                 => 'nullable|array',
+            'personas'               => 'nullable|array',
+            'detalle_pasantia'       => 'nullable|array',
+            'objeto'                 => 'nullable|string',
+            'alcance'                => 'nullable|string',
+            'obligaciones'           => 'nullable|string',
+            'condiciones_rescision'  => 'nullable|string',
+            'marco_legal'            => 'nullable|string',
+            'resolucion'             => 'nullable|string',
+            'expediente'             => 'nullable|string',
+            'condiciones_renovacion' => 'nullable|string',
+            'confidencialidad'       => 'nullable|string',
+            'notas'                  => 'nullable|string',
+            'fecha_firma'            => 'nullable|date',
         ]);
 
         $convenio = DB::transaction(function () use ($validatedData, $user, $tipo, $request) {
             $convenio = Convenio::create([
-                'codigo'        => $validatedData['codigo'],
-                'titulo'        => $validatedData['titulo'],
-                'tipo'          => $validatedData['tipo'],
-                'estado'        => 'borrador',
-                'unidad_id'     => $validatedData['unidad_id'],
-                'resumen'       => $validatedData['resumen'] ?? null,
-                'fecha_inicio'  => $validatedData['fecha_inicio'] ?? null,
-                'fecha_fin'     => $validatedData['fecha_fin'] ?? null,
-                'dias_preaviso' => $validatedData['dias_preaviso'] ?? 30,
-                'version'       => 1,
-                'creado_por'    => $user->id,
+                'codigo'                 => $validatedData['codigo'],
+                'titulo'                 => $validatedData['titulo'],
+                'tipo'                   => $validatedData['tipo'],
+                'estado'                 => 'borrador',
+                'unidad_id'              => $validatedData['unidad_id'],
+                'resumen'                => $validatedData['resumen'] ?? null,
+                'fecha_inicio'           => $validatedData['fecha_inicio'] ?? null,
+                'fecha_fin'              => $validatedData['fecha_fin'] ?? null,
+                'dias_preaviso'          => $validatedData['dias_preaviso'] ?? 30,
+                'version'                => 1,
+                'creado_por'             => $user->id,
+                'objeto'                 => $validatedData['objeto'] ?? null,
+                'alcance'                => $validatedData['alcance'] ?? null,
+                'obligaciones'           => $validatedData['obligaciones'] ?? null,
+                'condiciones_rescision'  => $validatedData['condiciones_rescision'] ?? null,
+                'marco_legal'            => $validatedData['marco_legal'] ?? null,
+                'resolucion'             => $validatedData['resolucion'] ?? null,
+                'expediente'             => $validatedData['expediente'] ?? null,
+                'condiciones_renovacion' => $validatedData['condiciones_renovacion'] ?? null,
+                'confidencialidad'       => $validatedData['confidencialidad'] ?? null,
+                'notas'                  => $validatedData['notas'] ?? null,
+                'fecha_firma'            => $validatedData['fecha_firma'] ?? null,
             ]);
 
             // Vínculo con el antecedente, si viene
@@ -201,24 +223,34 @@ class ConvenioController extends Controller
         }
 
         $validatedData = $request->validate([
-            'version'          => 'required|integer',
-            'codigo'           => 'sometimes|string|unique:convenios,codigo,' . $id,
-            'titulo'           => 'sometimes|string|min:5|max:255',
-            'tipo'             => 'sometimes|string|in:marco,especifico,adenda,pasantia',
-            'unidad_id'        => 'sometimes|exists:unidades,id',
-            'resumen'          => 'nullable|string',
-            'fecha_inicio'     => 'nullable|date',
-            'fecha_fin'        => 'nullable|date|after_or_equal:fecha_inicio',
-            'dias_preaviso'    => 'nullable|integer|between:0,365',
-            'partes'           => 'nullable|array',
-            'personas'         => 'nullable|array',
-            'detalle_pasantia' => 'nullable|array',
+            'version'                => 'required|integer',
+            'codigo'                 => 'sometimes|string|unique:convenios,codigo,' . $id,
+            'titulo'                 => 'sometimes|string|min:5|max:255',
+            'tipo'                   => 'sometimes|string|in:marco,especifico,adenda,pasantia',
+            'unidad_id'              => 'sometimes|exists:unidades,id',
+            'resumen'                => 'nullable|string',
+            'fecha_inicio'           => 'nullable|date',
+            'fecha_fin'              => 'nullable|date|after_or_equal:fecha_inicio',
+            'dias_preaviso'          => 'nullable|integer|between:0,365',
+            'partes'                 => 'nullable|array',
+            'personas'               => 'nullable|array',
+            'detalle_pasantia'       => 'nullable|array',
+            'objeto'                 => 'nullable|string',
+            'alcance'                => 'nullable|string',
+            'obligaciones'           => 'nullable|string',
+            'condiciones_rescision'  => 'nullable|string',
+            'marco_legal'            => 'nullable|string',
+            'resolucion'             => 'nullable|string',
+            'expediente'             => 'nullable|string',
+            'condiciones_renovacion' => 'nullable|string',
+            'confidencialidad'       => 'nullable|string',
+            'notas'                  => 'nullable|string',
+            'fecha_firma'            => 'nullable|date',
         ]);
 
         $conflicto = false;
 
         DB::transaction(function () use ($id, $validatedData, &$conflicto) {
-            // Bloqueo de fila: dos ediciones simultáneas no pasan las dos
             $convenio = Convenio::lockForUpdate()->find($id);
 
             if ((int) $validatedData['version'] !== (int) $convenio->version) {
@@ -258,7 +290,29 @@ class ConvenioController extends Controller
         return $this->success($this->cargarFicha($id, $user), 'Convenio actualizado correctamente');
     }
 
-   /**
+    /**
+     * DELETE /api/agreements/{id}
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = $request->user();
+
+        if ($user->rol !== 'admin') {
+            return $this->error('No tiene permisos para eliminar convenios', 403);
+        }
+
+        $convenio = Convenio::find($id);
+
+        if (!$convenio) {
+            return $this->error('Convenio no encontrado', 404);
+        }
+
+        $convenio->delete();
+
+        return response()->json(null, 204);
+    }
+
+    /**
      * POST /api/agreements/{id}/transitions
      */
     public function transition(Request $request, $id)
@@ -299,7 +353,6 @@ class ConvenioController extends Controller
 
             case 'revision->aprobado':
                 if (in_array($rol, ['admin', 'revision'])) {
-                    // Regla extra: al menos 2 partes y 0 observaciones sin resolver
                     $cantPartes = $existente->partes->count();
                     $obsPendientes = $existente->observaciones->where('esta_resuelta', false)->count();
 
@@ -315,7 +368,6 @@ class ConvenioController extends Controller
 
             case 'revision->borrador':
                 if (in_array($rol, ['admin', 'revision'])) {
-                    // Regla extra: debe existir al menos 1 observación pendiente
                     $obsPendientes = $existente->observaciones->where('esta_resuelta', false)->count();
                     if ($obsPendientes === 0) {
                         return $this->error('Para devolver a borrador debe registrar al menos una observación sin resolver', 422);
@@ -374,14 +426,13 @@ class ConvenioController extends Controller
         return $this->success($this->cargarFicha($id, $user), 'Estado actualizado correctamente');
     }
 
-/**
+    /**
      * GET /api/agreements/export
      */
     public function exportCsv(Request $request)
     {
         $user = $request->user();
 
-        // Aplicar la misma visibilidad por rol y los mismos filtros que en index()
         $query = Convenio::visiblePara($user)->with(['unidad']);
 
         if ($request->filled('q')) {
@@ -421,7 +472,6 @@ class ConvenioController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        // Función auxiliar para sanitizar celdas (requisito de seguridad del contrato)
         $sanitizar = function ($valor) {
             $str = (string) ($valor ?? '');
             if ($str !== '' && in_array($str[0], ['=', '+', '-', '@', "\t", "\r"])) {
@@ -432,16 +482,10 @@ class ConvenioController extends Controller
 
         $callback = function () use ($convenios, $sanitizar) {
             $file = fopen('php://output', 'w');
-
-            // BOM UTF-8 para que Excel detecte la codificación correctamente
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            // Encabezados de columnas con separador punto y coma (;)
             fputcsv($file, ['Código', 'Título', 'Tipo', 'Estado', 'Unidad Académica', 'Fecha Inicio', 'Fecha Fin'], ';');
 
-            // Filas de datos
             foreach ($convenios as $c) {
-                // Parseo seguro de fechas para evitar error 500 en PHP
                 $inicio = $c->fecha_inicio ? \Illuminate\Support\Carbon::parse($c->fecha_inicio)->format('Y-m-d') : '-';
                 $fin    = $c->fecha_fin ? \Illuminate\Support\Carbon::parse($c->fecha_fin)->format('Y-m-d') : '-';
 
@@ -461,14 +505,11 @@ class ConvenioController extends Controller
 
         return response()->stream($callback, 200, $headers);
     }
+
     // -------------------------------------------------------------------------
     // Helpers privados
     // -------------------------------------------------------------------------
 
-    /**
-     * Carga la ficha completa respetando el alcance del usuario.
-     * Devuelve null si no existe o no está en su alcance.
-     */
     private function cargarFicha($id, $user)
     {
         $convenio = Convenio::visiblePara($user)->with([
@@ -486,7 +527,6 @@ class ConvenioController extends Controller
             'observaciones',
         ])->find($id);
 
-        // El rol consulta no debe ver datos de contacto de personas
         if ($convenio && $user->rol === 'consulta') {
             $convenio->personas->each->makeHidden(['dni', 'email', 'telefono']);
 
@@ -527,7 +567,6 @@ class ConvenioController extends Controller
         $sync = [];
         foreach ($personas as $p) {
             $personaId = is_array($p) ? ($p['persona_id'] ?? $p['id'] ?? null) : $p;
-            // La columna `rol` es NOT NULL en personas_convenio
             $rol = is_array($p) ? ($p['rol'] ?? 'Sin especificar') : 'Sin especificar';
             if ($personaId) {
                 $sync[$personaId] = ['rol' => $rol];

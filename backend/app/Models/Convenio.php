@@ -16,19 +16,13 @@ class Convenio extends Model
     const CREATED_AT = 'creado_en';
     const UPDATED_AT = 'actualizado_en';
 
-    protected $fillable = [
-        'codigo',
-        'titulo',
-        'tipo',
-        'estado',
-        'unidad_id',
-        'resumen',
-        'fecha_inicio',
-        'fecha_fin',
-        'dias_preaviso',
-        'version',
-        'creado_por',
-    ];
+protected $fillable = [
+    'codigo', 'titulo', 'tipo', 'estado', 'unidad_id', 'resumen',
+    'fecha_inicio', 'fecha_fin', 'dias_preaviso', 'version', 'creado_por',
+    'objeto', 'alcance', 'obligaciones', 'condiciones_rescision',
+    'marco_legal', 'resolucion', 'expediente', 'condiciones_renovacion',
+    'confidencialidad', 'notas', 'fecha_firma'
+];
 
     /**
      * Alcance por rol (único lugar donde vive esta regla):
