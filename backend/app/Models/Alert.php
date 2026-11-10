@@ -9,10 +9,10 @@ class Alert extends Model
 {
     use HasFactory;
 
-    protected $table = 'notificaciones'; // o 'alertas' según tu base
+    protected $table = 'notificaciones';
 
     protected $fillable = [
-        'user_id',
+        'usuario_id',
         'titulo',
         'mensaje',
         'leida',
@@ -30,6 +30,6 @@ class Alert extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'usuario_id');
     }
 }

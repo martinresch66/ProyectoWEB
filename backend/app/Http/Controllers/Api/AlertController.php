@@ -15,7 +15,7 @@ class AlertController extends Controller
     {
         $user = $request->user();
 
-        $alertas = Alert::where('user_id', $user->id)
+        $alertas = Alert::where('usuario_id', $user->id)
             ->orderByDesc('id')
             ->get();
 
@@ -29,7 +29,7 @@ class AlertController extends Controller
     {
         $user = $request->user();
 
-        $alerta = Alert::where('user_id', $user->id)->find($id);
+        $alerta = Alert::where('usuario_id', $user->id)->find($id);
 
         if (!$alerta) {
             return response()->json(['message' => 'Alerta no encontrada'], 404);
