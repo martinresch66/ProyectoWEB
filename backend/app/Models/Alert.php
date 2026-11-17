@@ -11,6 +11,8 @@ class Alert extends Model
 
     protected $table = 'notificaciones';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'usuario_id',
         'titulo',
