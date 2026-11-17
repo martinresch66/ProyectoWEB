@@ -10,7 +10,7 @@ import { Boton, Cargando, EnlaceBoton } from "@/components/ui/basicos";
 import Dialogo from "@/components/ui/Dialogo";
 import { ROLES } from "@/lib/dominio";
 import { puedeAdministrarUsuarios, puedeGestionarCatalogos, puedeRevisar } from "@/lib/permisos";
-import { alertas } from "@/lib/api/servicios";
+import { alertas, EVENTO_AVISOS } from "@/lib/api/servicios";
 import { borrarTodoLoLocal } from "@/lib/db/offline";
 
 function enlacesPara(usuario) {
@@ -87,16 +87,28 @@ function BarraSuperior({ alAbrirMenu, menuAbierto }) {
     router.prefetch("/login");
   }, [router]);
 
+    // Cuenta los avisos sin leer al cambiar de pantalla, al marcar uno como leído
+  // (evento EVENTO_AVISOS) y al volver a la pestaña.
   useEffect(() => {
     let activo = true;
-    alertas.listar().then(
-      (lista) => {
-        if (activo) setNoLeidas(lista.filter((a) => !a.leida).length);
-      },
-      () => {},
-    );
+    const contar = () => {
+      alertas.listar().then(
+        (lista) => {
+          if (activo) setNoLeidas(lista.filter((a) => !a.leida).length);
+        },
+        () => {},
+      );
+    };
+    contar();
+    const alVolver = () => {
+      if (document.visibilityState === "visible") contar();
+    };
+    window.addEventListener(EVENTO_AVISOS, contar);
+    document.addEventListener("visibilitychange", alVolver);
     return () => {
       activo = false;
+      window.removeEventListener(EVENTO_AVISOS, contar);
+      document.removeEventListener("visibilitychange", alVolver);
     };
   }, [ruta, usuario?.id]);
 
