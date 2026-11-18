@@ -53,6 +53,7 @@ class VinculoController extends Controller
 
     /**
      * DELETE /api/agreements/{id}/links/{vinculoId}
+     * * Elimina un vínculo existente verificando pertenencia al convenio de la URL.
      */
     public function destroy($id, $vinculoId)
     {

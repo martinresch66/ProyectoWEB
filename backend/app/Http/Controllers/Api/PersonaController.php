@@ -10,11 +10,13 @@ class PersonaController extends Controller
 {
     /**
      * GET /api/people
+     * * Lista el padrón de personas físicas y enmascara el DNI según el rol del usuario.
      */
     public function index(Request $request)
     {
         $query = Persona::query();
 
+        // Búsqueda instantánea por nombre, apellido o DNI
         if ($request->filled('q')) {
             $q = $request->input('q');
             $query->where(function ($sub) use ($q) {
@@ -41,6 +43,7 @@ class PersonaController extends Controller
 
     /**
      * POST /api/people
+     * * Da de alta una persona física
      */
     public function store(Request $request)
     {

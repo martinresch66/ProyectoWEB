@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Storage;
 class DocumentoController extends Controller
 {
     /**
-     * POST /api/agreements/{id}/documents
+     * POST /api/agreements/{id}/documents\
+     * Sube un PDF adjunto, verifica integridad/duplicados por SHA-256, versiona y guarda fuera de public/
      */
     public function store(Request $request, $id)
     {
@@ -33,11 +34,28 @@ class DocumentoController extends Controller
             return response()->json(['message' => 'No tiene permisos para modificar este convenio'], 403);
         }
 
+        /*
+         *   Validación estricta del archivo entrante ($request->validate):
+         * - `file`: Verifica que sea un archivo subido correctamente vía multipart/form-data sin errores de PHP.
+         * - `mimes:pdf`: No confía solo en la extensión `.pdf` del nombre; Laravel inspecciona los "Magic Bytes" (firma binaria
+         *   interna `%PDF-`) del archivo real mediante Symfony MimeTypes para impedir que suban un `.exe` o `.php` renombrado.
+         * - `max:20480`: El tamaño máximo en Laravel se expresa en Kilobytes (20480 KB = 20 MB).
+         * - `tipo_documento`: Lista cerrada de categorías documentales aceptadas.
+         */
         $request->validate([
             'archivo'        => 'required|file|mimes:pdf|max:20480', // Máximo 20 MB
             'tipo_documento' => 'required|string|in:convenio_firmado,anexo,dictamen,resolucion,acta_pasantia,otro',
         ]);
 
+
+        /*
+         *    calculo de huella criptográfica SHA-256 y detección de duplicados:
+         * - `$request->file('archivo')`: Devuelve una instancia de `Illuminate\Http\UploadedFile(UploadedFile es la representación orientada a objetos de Laravel para un archivo recién subido, que te da métodos seguros para inspeccionarlo, validarlo y moverlo al almacenamiento definitivo.)`.
+         * - `$file->getRealPath()`: Obtiene la ruta temporal en el servidor (ej. `/tmp/phpXXXXXX`) donde PHP alojó el upload.
+         * - `hash_file('sha256', ...)`: Función nativa de PHP que lee los bytes reales del PDF y genera un resumen hexadecimal único de 64 caracteres.
+         * - POR QUÉ SE HACE ASÍ: Dos archivos idénticos (aunque uno se llame `final.pdf` y otro `copia_final(2).pdf`) producen exactamente
+         *   el mismo SHA-256. Con esa consulta evita almacenar archivos duplicados dentro del mismo convenio (`422 Unprocessable Entity`).
+         */
         $file = $request->file('archivo');
         $hashSha256 = hash_file('sha256', $file->getRealPath());
 
@@ -58,10 +76,12 @@ class DocumentoController extends Controller
             ->max('version') ?? 0;
 
         $version = $ultimaVersion + 1;
-
-        // Guardar físicamente fuera del directorio public/
+        // Guardar físicamente fuera del directorio public/(unico directorio que no esta aislado de internet) para evitar quq alguien intente adivinar
+        //  la URL directa tipo `http://servidor/documentos/archivo.pdf`;
+        //la única vía de descarga es pasar por el endpoint autenticado `download()` que valida token, rol y facultad.
         $path = $file->store('documentos/' . date('Y/m'));
 
+        // Persiste los metadatos en MySQL
         $documento = Documento::create([
             'convenio_id'     => $convenio->id,
             'tipo_documento'  => $request->tipo_documento,
@@ -79,6 +99,7 @@ class DocumentoController extends Controller
 
     /**
      * GET /api/documents/{id}/download
+     *descarga controlada del PDF verificando permisos sobre el convenio padre.
      */
     public function download(Request $request, $id)
     {
@@ -97,10 +118,18 @@ class DocumentoController extends Controller
             return response()->json(['message' => 'No tiene permisos para ver este documento'], 403);
         }
 
+        // Verifica que el archivo físico siga existiendo en `storage/app/...` antes de intentar enviarlo.
         if (!Storage::exists($documento->ruta_archivo)) {
             return response()->json(['message' => 'El archivo físico no fue encontrado en el servidor'], 404);
         }
 
+        /*
+         * `Storage::download($ruta, $nombreDescarga)`:
+         * - Método del Facade `Storage` (Illuminate\Support\Facades\Storage).
+         * - Lee el archivo privado desde `storage/app/...` y genera una `StreamedResponse` con las cabeceras HTTP
+         *   `Content-Type: application/pdf` y `Content-Disposition: attachment; filename="<nombre_original>"`,
+         *   devolviéndole al usuario el archivo con su nombre legible original en lugar del hash interno del servidor.
+         */
         return Storage::download($documento->ruta_archivo, $documento->nombre_original);
     }
 }

@@ -25,7 +25,7 @@ protected $fillable = [
 ];
 
     /**
-     * Alcance por rol (único lugar donde vive esta regla):
+     * - Alcance por rol (único lugar donde vive esta regla):
      * - admin / revision: todos
      * - gestion: los de su unidad
      * - consulta: firmados y no vencidos de su unidad
@@ -41,7 +41,7 @@ protected $fillable = [
                                     $q->whereNull('fecha_fin')
                                       ->orWhere('fecha_fin', '>=', now()->toDateString());
                                 }),
-            default    => $query->whereRaw('1 = 0'),
+            default    => $query->whereRaw('1 = 0'),/*si aparece un rol descomocido no devuelve nada por seguridad */
         };
     }
 

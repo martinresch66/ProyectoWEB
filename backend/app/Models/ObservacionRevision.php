@@ -21,6 +21,7 @@ class ObservacionRevision extends Model
         'usuario_revisor_id',
     ];
 
+    //cambia el valor por defecto en la bd que se guarda como(0 o 1) por true/false para no tener problemas al comunicarse con el front(en el metodo store/update de ObservacionCOntroller)
     protected $casts = [
         'esta_resuelta' => 'boolean',
     ];
