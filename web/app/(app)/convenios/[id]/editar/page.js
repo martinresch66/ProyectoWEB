@@ -17,7 +17,7 @@ export default function PaginaEditarConvenio() {
   const { usuario } = useSesion();
   const router = useRouter();
   const avisar = useAvisos();
-  const { datos: convenio, cargando, error, desdeCache, recargar } = useDatos(() => convenios.obtener(id), `ficha-${id}`);
+  const { datos: convenio, cargando, error, desdeCache, recargar } = useDatos(() => convenios.obtener(id), `ficha-${id}`); //le pido los datos al hook
   const [conflicto, setConflicto] = useState(null); // { mios, servidor }
 
   async function guardar(datos, version = convenio.version) {

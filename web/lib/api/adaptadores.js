@@ -3,7 +3,7 @@
 // tablas intermedias con el objeto anidado, etc.), así el front no se rompe
 // si el backend arma las respuestas un poco distinto. Si algo no coincide, se arregla acá.
 
-// { data: {...} } -> {...}
+// Quita el envoltorio "data" de una respuesta individual de Laravel, si existe.
 export function desenvolver(respuesta) {
   if (respuesta && typeof respuesta === "object" && !Array.isArray(respuesta) && "data" in respuesta && !Array.isArray(respuesta.data)) {
     return respuesta.data;
@@ -11,7 +11,7 @@ export function desenvolver(respuesta) {
   return respuesta;
 }
 
-// Paginación de Laravel (paginate() o API Resources) -> { items, pagina, ultimaPagina, total }
+// Convierte una respuesta paginada o una lista simple a un formato uniforme para la interfaz.
 export function normalizarPagina(respuesta, adaptarItem = (x) => x) {
   if (Array.isArray(respuesta)) {
     return { items: respuesta.map(adaptarItem), pagina: 1, ultimaPagina: 1, total: respuesta.length };
@@ -26,16 +26,18 @@ export function normalizarPagina(respuesta, adaptarItem = (x) => x) {
   };
 }
 
-// Lista que puede venir sola o paginada.
+// Normaliza una lista y devuelve solo sus elementos, sin los metadatos de paginación.
 export function normalizarLista(respuesta, adaptarItem = (x) => x) {
   return normalizarPagina(respuesta, adaptarItem).items;
 }
 
+// Reduce una unidad a los campos que consume la web y completa los opcionales con null.
 export function adaptarUnidad(u) {
   if (!u) return null;
   return { id: u.id, nombre: u.nombre, codigo: u.codigo ?? null, descripcion: u.descripcion ?? null };
 }
 
+// Unifica nombres de campos de usuario y adapta también su unidad y estado activo.
 export function adaptarUsuario(u) {
   if (!u) return null;
   return {
@@ -49,6 +51,7 @@ export function adaptarUsuario(u) {
   };
 }
 
+// Acepta una parte directa o anidada en una relación y conserva su rol dentro del convenio.
 export function adaptarParte(p) {
   // Puede venir como parte con pivot (belongsToMany) o como fila de partes_convenio con "parte" adentro.
   const base = p?.parte ?? p;
@@ -64,6 +67,7 @@ export function adaptarParte(p) {
   };
 }
 
+// Acepta una persona directa o anidada y conserva el rol asociado a la relación.
 export function adaptarPersona(p) {
   const base = p?.persona ?? p;
   return {
@@ -77,6 +81,7 @@ export function adaptarPersona(p) {
   };
 }
 
+// Extrae los campos mínimos de un convenio relacionado.
 function resumenConvenio(c) {
   if (!c) return null;
   return { id: c.id, codigo: c.codigo, titulo: c.titulo, tipo: c.tipo, estado: c.estado };
@@ -87,6 +92,7 @@ function resumenConvenio(c) {
 // - "derivado": este convenio es el destino (ej. un específico cuelga de este marco)
 function adaptarVinculos(c) {
   const id = Number(c.id);
+  // El mismo vínculo puede aparecer desde distintas relaciones; se combinan y deduplican por ID.
   const crudos = [
     ...(c.vinculos ?? []),
     ...(c.vinculos_origen ?? c.vinculos_como_origen ?? []),
@@ -97,6 +103,7 @@ function adaptarVinculos(c) {
   for (const v of crudos) {
     if (!v || vistos.has(v.id)) continue;
     vistos.add(v.id);
+    // Determina si el convenio actual es origen o destino para describir la dirección del vínculo.
     const esOrigen = Number(v.convenio_origen_id) === id;
     const otro = esOrigen ? v.convenio_destino ?? v.destino : v.convenio_origen ?? v.origen;
     resultado.push({
@@ -110,6 +117,7 @@ function adaptarVinculos(c) {
   return resultado;
 }
 
+// Normaliza metadatos del documento y obtiene el nombre de quien lo subió desde la relación disponible.
 export function adaptarDocumento(d) {
   return {
     id: d.id,
@@ -126,6 +134,7 @@ export function adaptarDocumento(d) {
   };
 }
 
+// Convierte el registro de un cambio de estado, incluyendo el nombre del usuario relacionado.
 export function adaptarTransicion(t) {
   return {
     id: t.id,
@@ -138,6 +147,7 @@ export function adaptarTransicion(t) {
   };
 }
 
+// Normaliza una observación, sus datos de resolución y la identidad del revisor.
 export function adaptarObservacion(o) {
   return {
     id: o.id,
@@ -151,6 +161,7 @@ export function adaptarObservacion(o) {
   };
 }
 
+// Adapta el detalle adicional de un convenio de pasantía y sus personas relacionadas.
 function adaptarPasantia(d) {
   if (!d) return null;
   return {
@@ -174,9 +185,11 @@ const CAMPOS_BASE = [
   "fecha_inicio", "fecha_fin", "dias_preaviso", "version", "creado_por",
 ];
 
+// Construye el modelo de convenio que usa la interfaz a partir de las variantes de la API.
 export function adaptarConvenio(entrada) {
   const c = desenvolver(entrada);
   if (!c) return null;
+  // Copia primero los campos comunes; luego normaliza tipos, valores por defecto y fechas.
   const convenio = {};
   for (const campo of CAMPOS_BASE) convenio[campo] = c[campo] ?? null;
   convenio.id = c.id;
@@ -190,6 +203,7 @@ export function adaptarConvenio(entrada) {
   convenio.creador_nombre = c.creador?.nombre ?? c.usuario?.nombre ?? null;
 
   // Relaciones: solo vienen en la ficha (GET /agreements/{id}).
+  // Cada relación se transforma con el adaptador correspondiente para mantener un formato estable.
   convenio.partes = (c.partes ?? c.partes_convenio ?? []).map(adaptarParte);
   convenio.personas = (c.personas ?? c.personas_convenio ?? []).map(adaptarPersona);
   convenio.detalle_pasantia = adaptarPasantia(c.detalle_pasantia ?? c.detalles_pasantia ?? null);
@@ -199,6 +213,7 @@ export function adaptarConvenio(entrada) {
   convenio.observaciones = (c.observaciones ?? c.observaciones_revision ?? []).map(adaptarObservacion);
 
   // Campos extra de la ficha (si el backend los agrega a la tabla convenios).
+  // Guarda únicamente valores escalares que no forman parte del modelo ni son relaciones.
   convenio.extras = {};
   for (const [clave, valor] of Object.entries(c)) {
     if (!(clave in convenio) && !CLAVES_RELACIONES.has(clave) && (typeof valor !== "object" || valor === null)) {
@@ -214,6 +229,7 @@ const CLAVES_RELACIONES = new Set([
   "vinculos_como_destino", "created_at", "updated_at", "creador", "usuario",
 ]);
 
+// Normaliza una notificación, incluido su indicador de lectura y fecha de creación.
 export function adaptarNotificacion(n) {
   return {
     id: n.id,
@@ -228,6 +244,7 @@ export function adaptarNotificacion(n) {
 // GET /dashboard. Acepta listas [{clave, cantidad}] u objetos {clave: cantidad}.
 export function adaptarDashboard(entrada) {
   const d = desenvolver(entrada) || {};
+  // Convierte las distintas representaciones de una serie estadística a pares clave/cantidad.
   const aLista = (valor, nombreClave) => {
     if (!valor) return [];
     if (Array.isArray(valor)) {
@@ -238,6 +255,7 @@ export function adaptarDashboard(entrada) {
     }
     return Object.entries(valor).map(([clave, cantidad]) => ({ clave, cantidad: Number(cantidad) }));
   };
+  // Devuelve todas las métricas del panel con nombres y tipos consistentes.
   return {
     total: Number(d.total ?? 0),
     firmados_vigentes: Number(d.firmados_vigentes ?? 0),
@@ -251,6 +269,7 @@ export function adaptarDashboard(entrada) {
   };
 }
 
+// Extrae credenciales y adapta el usuario de una respuesta de inicio de sesión.
 export function adaptarLogin(respuesta) {
   const r = desenvolver(respuesta) || {};
   return {

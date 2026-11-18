@@ -22,6 +22,8 @@ import {
 } from "@/lib/dominio";
 import { puedeEditarConvenio } from "@/lib/permisos";
 
+// Componente auxiliar para renderizar un dato de la ficha con un título y un valor.
+// Se usa en varias secciones para mantener un formato consistente en los campos.
 function Dato({ titulo, children }) {
   return (
     <div className="flex flex-col gap-1">
@@ -31,8 +33,12 @@ function Dato({ titulo, children }) {
   );
 }
 
+// Muestra el bloque principal de información del convenio: resumen, tipo, unidad,
+// campos extra definidos por el dominio y datos de fechas/plazos.
 function Datos({ convenio }) {
+  // Se muestran solo los campos extra que tengan valor para este convenio.
   const extras = Object.entries(CAMPOS_FICHA_EXTRA).filter(([clave]) => convenio.extras?.[clave]);
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <Tarjeta className="lg:col-span-2">
@@ -51,6 +57,7 @@ function Datos({ convenio }) {
           <Dato titulo="Versión">{convenio.version}</Dato>
         </dl>
       </Tarjeta>
+
       <Tarjeta titulo="Plazos">
         <dl className="flex flex-col gap-3">
           <Dato titulo="Inicio">{formatearFecha(convenio.fecha_inicio)}</Dato>
@@ -66,6 +73,8 @@ function Datos({ convenio }) {
   );
 }
 
+// Muestra las partes del convenio (instituciones) y las personas vinculadas.
+// La propiedad verContacto controla si se revela información sensible (email, DNI, teléfono).
 function PartesYPersonas({ convenio, verContacto }) {
   return (
     <div className="flex flex-col gap-4">
@@ -97,6 +106,7 @@ function PartesYPersonas({ convenio, verContacto }) {
           </div>
         )}
       </Tarjeta>
+
       <Tarjeta titulo={`Personas vinculadas (${convenio.personas.length})`}>
         {convenio.personas.length === 0 ? (
           <p className="text-sm text-gray-600">Sin personas vinculadas.</p>
@@ -129,8 +139,11 @@ function PartesYPersonas({ convenio, verContacto }) {
   );
 }
 
+// Vista específica para convenios de tipo pasantía.
+// Muestra la información académica y de supervisión del estudiante/institución.
 function Pasantia({ detalle, verContacto }) {
   if (!detalle) return <p className="text-sm text-gray-600">Todavía no se cargaron los datos de la pasantía.</p>;
+
   return (
     <Tarjeta>
       <dl className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -147,8 +160,11 @@ function Pasantia({ detalle, verContacto }) {
   );
 }
 
+// Lista cronológica de los cambios de estado del convenio.
+// Muestra estado anterior, nuevo estado y motivo del cambio.
 function Historial({ transiciones }) {
   if (!transiciones.length) return <p className="text-sm text-gray-600">Sin movimientos registrados.</p>;
+
   return (
     <ol className="flex flex-col gap-3">
       {transiciones.map((t) => (
@@ -168,18 +184,26 @@ function Historial({ transiciones }) {
   );
 }
 
+// Componente principal de la ficha del convenio.
+// Se encarga de cargar el convenio por ID, decidir qué pestañas mostrar y mostrar
+// la cabecera con estado, permisos y acciones según corresponda.
 export default function PaginaFicha() {
   const { id } = useParams();
   const { usuario } = useSesion();
   const { datos: convenio, cargando, error, desdeCache, recargar } = useDatos(() => convenios.obtener(id), `ficha-${id}`);
 
+  // Estado de carga inicial: mostrar pantalla de espera mientras llega el convenio.
   if (cargando && !convenio) return <Cargando texto="Cargando la ficha…" />;
+  // Error al consultar la API: mostrar bloque de error con opción de reintentar.
   if (error) return <ErrorCarga error={error} alReintentar={recargar} />;
+  // Si no se cargó ningún dato, no renderizar nada.
   if (!convenio) return null;
 
+  // Los usuarios con rol 'consulta' no ven datos de contacto sensibles.
   const verContacto = usuario.rol !== "consulta";
   const pendientes = convenio.observaciones.filter((o) => !o.esta_resuelta).length;
 
+  // Definimos las pestañas dinámicamente según el tipo de convenio y los recursos disponibles.
   const pestanas = [
     { id: "datos", titulo: "Datos", contenido: <Datos convenio={convenio} /> },
     { id: "partes", titulo: `Partes y personas (${convenio.partes.length + convenio.personas.length})`, contenido: <PartesYPersonas convenio={convenio} verContacto={verContacto} /> },
@@ -197,6 +221,7 @@ export default function PaginaFicha() {
         titulo={convenio.titulo}
         descripcion={`${convenio.codigo} · ${TIPOS[convenio.tipo]} · ${convenio.unidad?.nombre || ""}`}
         acciones={
+          // Solo se permite editar si el usuario tiene permisos y el convenio está en estado editable.
           puedeEditarConvenio(usuario, convenio) && (
             <EnlaceBoton href={`/convenios/${convenio.id}/editar`} variante="secundario">
               Editar borrador
@@ -204,7 +229,9 @@ export default function PaginaFicha() {
           )
         }
       />
+
       <AvisoCopiaLocal visible={desdeCache} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <InsigniaEstado estado={convenio.estado} />
@@ -212,9 +239,12 @@ export default function PaginaFicha() {
         </div>
         <AccionesEstado convenio={convenio} alCambiar={recargar} />
       </div>
-      {["firmado", "rescindido", "archivado"].includes(convenio.estado) && (
+
+      {/* Si el convenio ya está firmado, rescindido o archivado, se informa que no debe editarse directamente. */}
+      {['firmado', 'rescindido', 'archivado'].includes(convenio.estado) && (
         <Nota>Este convenio ya no se edita. Los cambios de fondo se hacen con una adenda o una renovación vinculada.</Nota>
       )}
+
       <Pestanas etiqueta="Secciones de la ficha" pestanas={pestanas} />
     </>
   );

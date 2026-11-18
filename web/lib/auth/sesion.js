@@ -1,6 +1,6 @@
 // Guarda el token y los datos básicos del usuario.
 // Usamos sessionStorage (se borra al cerrar la pestaña) para no dejar el token
-// guardado más de lo necesario, como pide el README de /web.
+// guardado más de lo necesario
 
 const CLAVE_TOKEN = "convenios.token";
 const CLAVE_USUARIO = "convenios.usuario";
