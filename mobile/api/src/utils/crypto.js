@@ -1,5 +1,7 @@
 import { createHash, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 
+import bcrypt from 'bcryptjs';
+
 /**
  * Encripta una contraseña con scrypt + salt aleatorio. Formato: "salt:hash".
  * Nunca se guardan contraseñas en texto plano.
@@ -10,9 +12,17 @@ export function hashPassword(password) {
   return `${salt}:${hash}`;
 }
 
-/** Compara una contraseña con su hash en tiempo constante (evita ataques de tiempo). */
+/**
+ * Compara una contraseña con su hash en tiempo constante (evita ataques de tiempo).
+ * Acepta los dos formatos: bcrypt ("$2y$12$…", el de Laravel y la base MySQL) y scrypt ("salt:hash", datos de prueba).
+ */
 export function verifyPassword(password, stored) {
-  const [salt, hash] = String(stored).split(':');
+  const valor = String(stored ?? '');
+  if (valor.startsWith('$2')) {
+    // PHP guarda bcrypt como $2y$; es el mismo algoritmo que $2b$, el prefijo que usa bcryptjs.
+    return bcrypt.compareSync(String(password), valor.replace(/^\$2y\$/, '$2b$'));
+  }
+  const [salt, hash] = valor.split(':');
   if (!salt || !hash) return false;
   const candidate = scryptSync(password, salt, 64);
   const expected = Buffer.from(hash, 'hex');

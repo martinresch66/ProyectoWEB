@@ -34,7 +34,7 @@ Usa el puerto **4000** para no chocar con Laravel (8000) ni con la web (3000).
 
 ## Usuarios de prueba
 
-Los del seed, todos con la contraseña **`1234`** (en Laravel es `password123`, la de `seeds.sql`): `admin@`, `gestion.ing@`, `revision@` y `consulta.exactas@unlpam.edu.ar`.
+Los del seed, todos con la contraseña **`password123`** (en Laravel es `password123`, la de `seeds.sql`): `admin@`, `gestion.ing@`, `revision@` y `consulta.exactas@unlpam.edu.ar`.
 El código MFA se "envía" de forma simulada: aparece en la consola de la API y la app lo muestra como notificación.
 
 ## Endpoints
@@ -103,3 +103,15 @@ src/
 
 Los cambios que se hagan con la API simulada viven en memoria: al reiniciarla vuelve a los datos del seed.
 
+## Base de datos (MySQL o datos de prueba)
+
+La API puede leer los datos de dos lugares, según `DATA_SOURCE` en `api/.env` (copiar `.env.example` como `.env`):
+
+| `DATA_SOURCE` | De dónde salen los datos | Cuándo usarlo |
+|---|---|---|
+| `mysql` | La base `convenios_unlpam` de XAMPP, la misma que usa Laravel (importada con `database/seeedsCompleta.sql`) | Siempre que esté XAMPP: la app y la web ven los mismos datos |
+| `memoria` (o sin `.env`) | Los datos de prueba de `src/data` | Respaldo, si no hay MySQL |
+
+Con MySQL, antes de cada pedido la API lee las tablas (como máximo cada 2 s) y los repositorios trabajan igual que con los datos de prueba (`src/data/mysql.js`). Las contraseñas de la base están con bcrypt, como las guarda Laravel. Al iniciar, la consola muestra qué fuente usa, y `GET /api/health` responde `"datos": "mysql"` o `"memoria"`.
+
+Si MySQL no está iniciado, las rutas responden **503** con un mensaje que explica qué falta.

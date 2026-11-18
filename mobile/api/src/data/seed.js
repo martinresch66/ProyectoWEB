@@ -17,8 +17,8 @@ export const unidades = [
 ];
 
 /** Contraseña de todos los usuarios del seed (en la base está el hash bcrypt; acá se hashea al iniciar). */
-// En database/seeds.sql (Laravel) la contraseña es password123; en la API simulada se usa una más corta para probar rápido.
-export const PASSWORD_DE_PRUEBA = '1234';
+// Es la misma que tienen los usuarios en la base MySQL (database/seeedsCompleta.sql), así se entra igual con las dos fuentes.
+export const PASSWORD_DE_PRUEBA = 'password123';
 
 export const usuarios = [
   { id: 1, unidad_id: null, nombre: 'Martín Resch (Admin)', email: 'admin@unlpam.edu.ar', rol: 'admin', activo: 1 },

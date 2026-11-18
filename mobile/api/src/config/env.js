@@ -5,6 +5,23 @@
 export const env = {
   port: Number(process.env.PORT ?? 4000),
 
+  /**
+   * De dónde salen los datos:
+   * - 'mysql': la base de XAMPP (la misma que usa Laravel, cargada con database/seeedsCompleta.sql).
+   * - 'memoria': los datos de prueba de src/data (no necesita MySQL; sirve de respaldo).
+   */
+  fuenteDatos: process.env.DATA_SOURCE === 'mysql' ? 'mysql' : 'memoria',
+  /** Conexión a MySQL: mismos nombres de variables que el .env de Laravel. */
+  mysql: {
+    host: process.env.DB_HOST ?? '127.0.0.1',
+    port: Number(process.env.DB_PORT ?? 3306),
+    database: process.env.DB_DATABASE ?? 'convenios_unlpam',
+    user: process.env.DB_USERNAME ?? 'root',
+    password: process.env.DB_PASSWORD ?? '',
+  },
+  /** Cada cuánto, como máximo, se vuelven a leer las tablas de MySQL (los cambios de la web se ven después de esto). */
+  mysqlRecargaMs: 2000,
+
   /** Clave para firmar los JWT. En producción se debe definir JWT_SECRET. */
   jwtSecret: process.env.JWT_SECRET ?? 'dev-secret-cambiar-en-produccion',
   /** Duración del access token (JWT). */

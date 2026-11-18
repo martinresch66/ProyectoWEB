@@ -28,3 +28,9 @@ export const db = {
   observaciones_revision: [...seed.observaciones, ...extra.observaciones],
   notificaciones: [...seed.notificaciones, ...extra.notificaciones],
 };
+
+
+/** Reemplaza todas las tablas de una sola vez (lo usa data/mysql.js después de leer la base). */
+export function reemplazarTablas(tablas) {
+  Object.assign(db, tablas);
+}

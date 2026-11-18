@@ -2,7 +2,11 @@
 export function notFound(req, res) {
   res.status(404).json({ message: `Ruta no encontrada: ${req.method} ${req.originalUrl}` });
 }
-
+/*
+*
+*
+* Esto hace que si MySQL esta apagado muestre el motivo en lugar del error interno
+*/ 
 /**
  * Manejo centralizado de errores. Responde como Laravel (§2 de CONTRATO-API.md):
  * { "message": "..." } y, en los 422, también { "errors": { "campo": ["..."] } }.
@@ -14,9 +18,11 @@ export function errorHandler(err, req, res, next) {
     return res.status(400).json({ message: 'El cuerpo de la petición no es un JSON válido.' });
   }
   const status = err.status ?? 500;
-  if (status >= 500) console.error(err);
+  // 503 (servicio no disponible, ej: MySQL apagado) muestra su mensaje; el resto de los 5xx, uno genérico.
+  const interno = status >= 500 && status !== 503;
+  if (interno) console.error(err);
   res.status(status).json({
-    message: status >= 500 ? 'Error interno del servidor.' : err.message,
+    message: interno ? 'Error interno del servidor.' : err.message,
     ...(err.errors && { errors: err.errors }),
   });
 }

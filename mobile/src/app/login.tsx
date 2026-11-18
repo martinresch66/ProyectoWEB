@@ -13,8 +13,8 @@ import { mensajeDeError } from '@/utils/confirm';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Usuarios de database/seeds.sql, los mismos que muestra la web en modo simulado. En la API simulada la contraseña es 1234
- * (en Laravel sigue siendo password123, la del seed).
+ * Usuarios de prueba, los mismos de la base MySQL (database/seeedsCompleta.sql) y de la web.
+ * La contraseña es password123 tanto con MySQL como con los datos de prueba en memoria.
  * Solo aparecen mientras se desarrolla (__DEV__), no en el APK final.
  */
 const USUARIOS_DE_PRUEBA = [
@@ -23,7 +23,7 @@ const USUARIOS_DE_PRUEBA = [
   { email: 'revision@unlpam.edu.ar', rol: 'Revisión' },
   { email: 'consulta.exactas@unlpam.edu.ar', rol: 'Consulta · Exactas' },
 ];
-const PASSWORD_DE_PRUEBA = '1234';
+const PASSWORD_DE_PRUEBA = 'password123';
 
 /**
  * Login (paso 1): email y contraseña, o ingreso con huella si está activado en este celular.
