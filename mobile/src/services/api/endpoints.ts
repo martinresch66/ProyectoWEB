@@ -18,6 +18,9 @@ export const ENDPOINTS = {
   desactivarHuella: '/auth/mobile/biometric/disable',
 
   // Convenios (§4)
+   
+  resumen: '/mobile/resumen',
+    pdfConvenio: (id: number | string) => `/mobile/convenios/${encodeURIComponent(String(id))}/pdf`,  
   convenios: '/agreements',
   convenio: (id: number | string) => `/agreements/${encodeURIComponent(String(id))}`,
 

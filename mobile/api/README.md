@@ -67,7 +67,9 @@ El código MFA se "envía" de forma simulada: aparece en la consola de la API y 
 | `POST` | `/api/auth/mobile/biometric/enable` 🔒 | `{ device_id, device_name }` → `{ device_token }` |
 | `POST` | `/api/auth/mobile/biometric/login` | `{ device_id, device_token }` → `{ token, refresh_token, user }` |
 | `POST` | `/api/auth/mobile/biometric/disable` 🔒 | `{ device_id }` → `204` |
-
+| `GET` | `/api/mobile/resumen` 🔒 | Datos del Inicio: totales, últimos movimientos y pendientes de firma, según el rol y la unidad |
+| `GET` | `/api/mobile/convenios/:id/pdf` 🔒 | PDF del convenio para leer, compartir y firmar en la app |
+| `GET` | `/visor/index.html` | Visor de PDF (pdf.js) que abre la app en un WebView; no contiene datos |
 🔒 = requiere `Authorization: Bearer <token>`.
 
 **Errores** con el formato de Laravel (§2 del contrato): `{ "message": "..." }`, y en los `422` también
@@ -100,3 +102,4 @@ src/
 ```
 
 Los cambios que se hagan con la API simulada viven en memoria: al reiniciarla vuelve a los datos del seed.
+

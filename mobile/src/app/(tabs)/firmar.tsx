@@ -1,26 +1,40 @@
 import { AppText } from '@/components/atoms';
+import { EmptyState } from '@/components/molecules';
 import { ConvenioList } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { useAsync } from '@/hooks/useAsync';
-import { conveniosService } from '@/services/convenios.service';
+import { resumenService } from '@/services/resumen.service';
 
 /**
- * Firmador.
- * Etapa 0: convenios en estado "aprobado" (en el circuito de la web, aprobado → firmado es "Registrar firma").
- * Etapa 5: máx. 10, los más nuevos primero, y el flujo de firma.
+ * Firmador: convenios aprobados que esperan la firma, máximo 10, del más reciente al más antiguo.
+ * Usa los pendientes de GET /mobile/resumen (la API ya filtra por rol y unidad).
+ * Al tocar uno se abre la ficha (procedencia, partes firmantes, fechas, convenio padre)
+ * y desde ahí "Leer y firmar" abre el PDF.
  */
 export default function FirmarScreen() {
-  const { data, loading, error, reload } = useAsync(() => conveniosService.listar({ estado: 'aprobado', per_page: 10 }), []);
+  const { data, loading, error, reload } = useAsync(() => resumenService.obtener(), []);
+
+  if (data && !data.puede_firmar) {
+    return (
+      <Screen refreshing={loading} onRefresh={reload}>
+        <EmptyState
+          icon="lock-closed-outline"
+          title="Tu rol no firma convenios"
+          message="Solo administración y gestión registran firmas. Podés consultar los convenios desde el buscador."
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen refreshing={loading && !!data} onRefresh={reload}>
-      <AppText color="textSecondary">Convenios aprobados que esperan la firma de las autoridades.</AppText>
+      <AppText color="textSecondary">Convenios aprobados que esperan tu firma, del más reciente al más antiguo.</AppText>
       <ConvenioList
-        convenios={data?.data ?? null}
+        convenios={data?.pendientes_firma ?? null}
         loading={loading}
         error={error}
         onRetry={reload}
-        emptyMessage="No hay convenios pendientes de firma."
+        emptyMessage="No tenés convenios pendientes de firma."
       />
     </Screen>
   );

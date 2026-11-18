@@ -42,6 +42,15 @@ export function configureApiAuth(hooks: AuthHooks | null) {
   authHooks = hooks;
 }
 
+/**
+ * Token de la sesión para pedidos que no pasan por apiRequest (ej: descargar un PDF).
+ * Con `renovar = true` pide uno nuevo con el refresh token (para reintentar después de un 401).
+ */
+export async function tokenDeSesion(renovar = false): Promise<string | null> {
+  if (!authHooks) return null;
+  return renovar ? authHooks.refresh() : authHooks.getAccessToken();
+}
+
 function buildUrl(path: string, query?: Query) {
   const url = `${env.apiUrl}${path}`;
   if (!query) return url;

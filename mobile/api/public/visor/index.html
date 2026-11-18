@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <!-- user-scalable=yes: permite hacer zoom con dos dedos (requisito del T2). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes" />
+    <title>Visor de convenios</title>
+    <style>
+      :root { --fondo: #e5e7eb; --texto: #374151; }
+      html.oscuro { --fondo: #0b1220; --texto: #cbd5e1; }
+      body { margin: 0; background: var(--fondo); color: var(--texto); font-family: system-ui, sans-serif; }
+      #estado { padding: 48px 16px; text-align: center; }
+      #paginas { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 8px; }
+      canvas { display: block; width: 100%; max-width: 900px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); }
+      #fin { height: 24px; }
+    </style>
+  </head>
+  <body>
+    <div id="estado">Cargando el documento…</div>
+    <div id="paginas"></div>
+    <div id="fin"></div>
+
+    <script type="module">
+      /*
+       * Visor de PDF para el WebView de la app (pdf.js, servido por la propia API en /visor/pdfjs).
+       * La app descarga el PDF con el token y lo pasa acá con window.mostrarPdf(base64).
+       * Este archivo no tiene datos: solo dibuja lo que recibe.
+       *
+       * Mensajes que se mandan a la app: preparado · listo (cantidad de páginas) · pagina (la que se ve) ·
+       * final (se llegó al final del documento) · error.
+       */
+      import * as pdfjs from './pdfjs/pdf.min.mjs';
+
+      pdfjs.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.mjs';
+
+      const avisar = (mensaje) => window.ReactNativeWebView?.postMessage(JSON.stringify(mensaje));
+      const estado = document.getElementById('estado');
+      const contenedor = document.getElementById('paginas');
+
+      function base64ABytes(base64) {
+        const binario = atob(base64);
+        const bytes = new Uint8Array(binario.length);
+        for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+        return bytes;
+      }
+
+      function observarLectura(total) {
+        // Página que se está viendo (la que ocupa más pantalla).
+        const visibles = new Map();
+        const observador = new IntersectionObserver(
+          (entradas) => {
+            for (const e of entradas) visibles.set(Number(e.target.dataset.pagina), e.intersectionRatio);
+            const [pagina] = [...visibles.entries()].sort((a, b) => b[1] - a[1])[0] ?? [1];
+            avisar({ tipo: 'pagina', pagina, total });
+          },
+          { threshold: [0, 0.25, 0.5, 0.75, 1] },
+        );
+        contenedor.querySelectorAll('canvas').forEach((c) => observador.observe(c));
+
+        // Final del documento: el bloque #fin entra en pantalla.
+        new IntersectionObserver((entradas) => {
+          if (entradas.some((e) => e.isIntersecting)) avisar({ tipo: 'final' });
+        }).observe(document.getElementById('fin'));
+      }
+
+      window.mostrarPdf = async (base64, opciones = {}) => {
+        try {
+          document.documentElement.classList.toggle('oscuro', Boolean(opciones.oscuro));
+          const pdf = await pdfjs.getDocument({ data: base64ABytes(base64) }).promise;
+          contenedor.replaceChildren();
+          const ancho = Math.min(document.documentElement.clientWidth - 16, 900);
+          // Se dibuja con más resolución que la pantalla para que el zoom se vea nítido.
+          const nitidez = Math.min(3, (window.devicePixelRatio || 1) * 1.5);
+
+          for (let n = 1; n <= pdf.numPages; n++) {
+            const pagina = await pdf.getPage(n);
+            const escala = (ancho / pagina.getViewport({ scale: 1 }).width) * nitidez;
+            const viewport = pagina.getViewport({ scale: escala });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            canvas.dataset.pagina = String(n);
+            canvas.setAttribute('role', 'img');
+            canvas.setAttribute('aria-label', `Página ${n} de ${pdf.numPages}`);
+            contenedor.appendChild(canvas);
+            await pagina.render({ canvas, viewport }).promise;
+          }
+
+          estado.remove();
+          avisar({ tipo: 'listo', total: pdf.numPages });
+          observarLectura(pdf.numPages);
+        } catch (error) {
+          estado.textContent = 'No se pudo mostrar el documento.';
+          avisar({ tipo: 'error', mensaje: String(error?.message ?? error) });
+        }
+      };
+
+      avisar({ tipo: 'preparado' });
+    </script>
+  </body>
+</html>

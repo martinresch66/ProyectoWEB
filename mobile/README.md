@@ -100,7 +100,7 @@ agrega los convenios 6 a 14 en [`api/src/data/extra.js`](api/src/data/extra.js).
 |---|---|
 | **Login** | Email y contraseña, verificación en dos pasos (mail / SMS / push simulados), ingreso con huella, la sesión queda guardada (no se pide login otra vez), cierre de sesión. |
 | **Autenticación con tokens** | Token Bearer en cada pedido; si vence, la app lo renueva sola con el refresh token. Sesión guardada encriptada (SecureStore). |
-| **Inicio** | Saludo con rol y unidad, listado de convenios que el backend devuelve según el rol (los boxes de resumen son la próxima etapa). |
+| **Inicio** | Boxes de firmados en el último año, vigentes, en trámite y esperando firma; mis pendientes y últimos movimientos (máx. 10, del más reciente al más antiguo). |
 | **Buscador** | En el header y en su pestaña (busca en código, título y resumen). |
 | **Firmar** | Convenios en estado `aprobado` (en la web, aprobado → firmado es "Registrar firma"). |
 | **Ficha del convenio** | Estado, tipo y vigencia (mismos colores que la web), resumen, unidad, fechas, partes, personas, pasantía, convenios vinculados (padre/hijo), documentos, historial y observaciones sin resolver. |

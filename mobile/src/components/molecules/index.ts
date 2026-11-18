@@ -10,3 +10,5 @@ export * from './SearchBar';
 export * from './SectionHeader';
 export * from './SegmentedControl';
 export * from './VigenciaBadge';
+export * from './MovimientoItem';
+export * from './StatBox';

@@ -110,3 +110,6 @@ export function formatearMonto(valor: number | null | undefined): string {
   if (valor === null || valor === undefined) return '—';
   return `$ ${Math.round(Number(valor)).toLocaleString('es-AR')}`;
 }
+
+/** Roles que registran la firma (aprobado → firmado), igual que en la web y en la API. */
+export const ROLES_QUE_FIRMAN: Rol[] = ['admin', 'gestion'];

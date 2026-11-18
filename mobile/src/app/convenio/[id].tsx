@@ -4,7 +4,8 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { AppText, Badge, Button, Card, Icon, type IconName } from '@/components/atoms';
 import { EmptyState, EstadoBadge, SectionHeader, VigenciaBadge } from '@/components/molecules';
 import { Screen } from '@/components/templates';
-import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO } from '@/domain/dominio';
+import { useAuth } from '@/context/AuthContext';
+import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
 import type { ConvenioRelacionado } from '@/models';
 import { conveniosService } from '@/services/convenios.service';
@@ -56,6 +57,8 @@ export default function ConvenioDetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing } = useAppTheme();
   const { data: c, loading, error, reload } = useAsync(() => conveniosService.obtener(id), [id]);
+  const router = useRouter();
+  const { usuario } = useAuth();
 
   if (loading && !c) {
     return <ActivityIndicator color={colors.primary} style={{ flex: 1, backgroundColor: colors.background }} />;
@@ -76,6 +79,7 @@ export default function ConvenioDetalleScreen() {
 
   const pasantia = c.detalle_pasantia;
   const pendientes = c.observaciones.filter((o) => !Number(o.esta_resuelta));
+  const puedeFirmar = c.estado === 'aprobado' && !!usuario && ROLES_QUE_FIRMAN.includes(usuario.rol);
 
   return (
     <Screen refreshing={loading} onRefresh={reload}>
@@ -90,6 +94,13 @@ export default function ConvenioDetalleScreen() {
           <VigenciaBadge convenio={c} />
         </View>
       </View>
+
+      <Button
+        title={puedeFirmar ? 'Leer y firmar' : 'Ver el documento (PDF)'}
+        icon={puedeFirmar ? 'create-outline' : 'document-text-outline'}
+        variant={puedeFirmar ? 'primary' : 'secondary'}
+        onPress={() => router.push({ pathname: '/documento/[id]', params: { id: String(c.id) } })}
+      />
 
       <Card style={{ gap: spacing.md }}>
         {c.resumen && <InfoRow icon="document-text-outline" label="Resumen" value={c.resumen} />}

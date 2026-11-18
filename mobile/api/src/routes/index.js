@@ -4,6 +4,7 @@ import { catalogosController } from '../controllers/catalogos.controller.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { authRouter } from './auth.routes.js';
 import { conveniosRouter } from './convenios.routes.js';
+import { mobileRouter } from './mobile.routes.js';
 
 /**
  * Todas las rutas, bajo /api. Son las mismas de web/CONTRATO-API.md, para que la app
@@ -22,3 +23,5 @@ apiRouter.use('/agreements', requireAuth, conveniosRouter);
 apiRouter.get('/units', requireAuth, catalogosController.unidades);
 apiRouter.get('/alerts', requireAuth, catalogosController.alertas);
 apiRouter.patch('/alerts/:id', requireAuth, catalogosController.marcarAlerta);
+// Solo app móvil: Inicio, firma, comentarios… (no están en el contrato)
+apiRouter.use('/mobile', requireAuth, mobileRouter);
