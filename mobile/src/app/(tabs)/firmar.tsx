@@ -3,6 +3,7 @@ import { EmptyState } from '@/components/molecules';
 import { ConvenioList } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { useAsync } from '@/hooks/useAsync';
+import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
 import { resumenService } from '@/services/resumen.service';
 
 /**
@@ -13,6 +14,9 @@ import { resumenService } from '@/services/resumen.service';
  */
 export default function FirmarScreen() {
   const { data, loading, error, reload } = useAsync(() => resumenService.obtener(), []);
+
+  // Al volver de firmar, el convenio firmado deja de aparecer en la lista.
+  useRecargarAlVolver(reload);
 
   if (data && !data.puede_firmar) {
     return (

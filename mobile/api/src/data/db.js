@@ -27,6 +27,8 @@ export const db = {
   transiciones_estado: [...seed.transiciones, ...extra.transiciones],
   observaciones_revision: [...seed.observaciones, ...extra.observaciones],
   notificaciones: [...seed.notificaciones, ...extra.notificaciones],
+  // Firmas hechas desde la app (en MySQL son las filas de registros_auditoria con accion = 'firmar_convenio').
+  firmas: [],
 };
 
 

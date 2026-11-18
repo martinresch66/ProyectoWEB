@@ -33,6 +33,15 @@ export const movimientosRepository = {
     return [...cambiosDeEstado, ...documentos];
   },
 
+  /** Fecha (ISO) del movimiento más reciente del convenio, o null si no tiene. */
+  ultimaFecha(convenioId) {
+    const fechas = this.findAll()
+      .filter((m) => m.convenio_id === convenioId && m.fecha)
+      .map((m) => m.fecha)
+      .sort((a, b) => ms(b) - ms(a));
+    return fechas[0] ?? null;
+  },
+  
   /** Fecha (ISO) de la última vez que el convenio pasó a `estado`, o null si no está registrada. */
   fechaDeEstado(convenioId, estado) {
     const fechas = db.transiciones_estado

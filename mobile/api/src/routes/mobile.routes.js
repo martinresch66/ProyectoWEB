@@ -9,4 +9,7 @@ import { mobileController } from '../controllers/mobile.controller.js';
 export const mobileRouter = Router();
 
 mobileRouter.get('/resumen', mobileController.resumen);
+mobileRouter.get('/resumen/:indicador', mobileController.indicador);
 mobileRouter.get('/convenios/:id/pdf', mobileController.pdfConvenio);
+mobileRouter.get('/convenios/:id/firma', mobileController.firma);
+mobileRouter.post('/convenios/:id/firma', mobileController.firmar);

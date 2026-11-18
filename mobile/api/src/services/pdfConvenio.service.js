@@ -1,9 +1,11 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { LineCapStyle, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 /**
  * Arma el PDF con el texto del convenio (el documento que se lee y se firma en la app).
  * Los datos de prueba no traen archivos reales, así que el PDF se genera a partir de la ficha:
  * partes, objeto, vigencia, responsables, cláusulas y el espacio para las firmas.
+ * Si recibe una firma, la estampa: trazo manuscrito sobre la línea de la universidad, fecha, hora,
+ * latitud y longitud, un sello en la primera hoja y una leyenda al pie de todas las hojas.
  */
 
 const TIPOS = {
@@ -31,12 +33,39 @@ const MARGEN = 56;
 const AZUL = rgb(0.11, 0.31, 0.85);
 const GRIS = rgb(0.4, 0.42, 0.46);
 const NEGRO = rgb(0.07, 0.09, 0.15);
+const VERDE = rgb(0.09, 0.4, 0.2);
+const TINTA = rgb(0.08, 0.16, 0.45);
+
+const ROLES = { admin: 'Administración', gestion: 'Gestión', revision: 'Revisión', consulta: 'Consulta' };
+const VERIFICACION = { huella: 'huella digital', rostro: 'reconocimiento facial', biometria: 'biometría' };
 
 /** "2026-12-02" → "2 de diciembre de 2026". */
 function fechaLarga(valor) {
   if (!valor) return null;
   const [a, m, d] = valor.slice(0, 10).split('-').map(Number);
   return `${d} de ${MESES[m - 1]} de ${a}`;
+}
+
+/** Fecha y hora de Argentina de un instante ISO: { fecha: "18/11/2026", hora: "14:32:10" }. */
+function fechaHora(iso) {
+  const partes = new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(iso));
+  const p = Object.fromEntries(partes.map(({ type, value }) => [type, value]));
+  return { fecha: `${p.day}/${p.month}/${p.year}`, hora: `${p.hour}:${p.minute}:${p.second}` };
+}
+
+/** "latitud -36.616200, longitud -64.283900 (precisión ±12 m)" */
+function textoUbicacion(f) {
+  const precision = f.precision_m !== null && f.precision_m !== undefined ? ` (precisión ±${f.precision_m} m)` : '';
+  return `latitud ${f.latitud.toFixed(6)}, longitud ${f.longitud.toFixed(6)}${precision}`;
 }
 
 /** Las fuentes estándar de PDF solo tienen caracteres latinos: el resto se reemplaza para que no falle. */
@@ -108,8 +137,78 @@ class Escritor {
   }
 }
 
-/** Genera el PDF del convenio. Recibe la ficha completa (conveniosService.obtener). Devuelve los bytes. */
-export async function generarPdfConvenio(c) {
+/**
+ * Dibuja la firma manuscrita (los trazos que se hicieron en el celular) dentro de una caja,
+ * sin deformarla: se escala para que entre y queda apoyada sobre la línea de firma.
+ */
+function dibujarTrazado(pagina, { trazos }, caja) {
+  const puntos = trazos.flat();
+  const xs = puntos.map((p) => p[0]);
+  const ys = puntos.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const ancho = Math.max(Math.max(...xs) - minX, 1);
+  const alto = Math.max(Math.max(...ys) - minY, 1);
+  const escala = Math.min(caja.ancho / ancho, caja.alto / alto);
+  const abajo = caja.alto - alto * escala; // apoyada sobre la línea
+
+  const punto = ([x, y]) => `${((x - minX) * escala).toFixed(2)} ${((y - minY) * escala + abajo).toFixed(2)}`;
+  const camino = trazos
+    .map((t) => (t.length === 1 ? `M ${punto(t[0])} l 0.6 0` : `M ${punto(t[0])} L ${t.slice(1).map(punto).join(' L ')}`))
+    .join(' ');
+  // En drawSvgPath, (x, y) es la esquina superior izquierda y el eje y va hacia abajo, como en el celular.
+  pagina.drawSvgPath(camino, {
+    x: caja.x,
+    y: caja.y + caja.alto,
+    borderColor: TINTA,
+    borderWidth: 1.4,
+    borderLineCap: LineCapStyle.Round,
+  });
+}
+
+/** Bloque de firma de la universidad ya firmado: trazo, línea, firmante, fecha, hora y lugar. */
+function bloqueFirmado(e, parte, firma) {
+  const { fecha, hora } = fechaHora(firma.fecha);
+  const dato = { tam: 8.5, color: GRIS, despues: 0 };
+  e.espacio(150);
+  e.y -= 70;
+  dibujarTrazado(e.pagina, firma.trazado, { x: MARGEN + 8, y: e.y + 3, ancho: 200, alto: 60 });
+  e.pagina.drawLine({ start: { x: MARGEN, y: e.y }, end: { x: MARGEN + 220, y: e.y }, thickness: 0.8, color: NEGRO });
+  e.y -= 14;
+  e.parrafo(parte.nombre, { fuente: e.f.negrita, tam: 10, despues: 0 });
+  e.parrafo(`${firma.firmante.nombre} · ${ROLES[firma.firmante.rol] ?? firma.firmante.rol}`, { tam: 9, despues: 2 });
+  e.parrafo(`Firmado digitalmente el ${fecha} a las ${hora} (hora de Argentina).`, dato);
+  e.parrafo(`Lugar de la firma: ${textoUbicacion(firma)}.`, dato);
+  e.parrafo(
+    `Identidad verificada con ${VERIFICACION[firma.verificacion] ?? firma.verificacion} en el celular. Firma manuscrita hecha en la pantalla.`,
+    { ...dato, despues: 10 },
+  );
+}
+
+/** Sello "FIRMADO DIGITALMENTE" arriba a la derecha de la primera hoja. */
+function sello(pagina, fuentes, firma) {
+  const { fecha, hora } = fechaHora(firma.fecha);
+  const ancho = 136;
+  const alto = 38;
+  const x = ANCHO - MARGEN - ancho;
+  const y = ALTO - MARGEN - 26;
+  pagina.drawRectangle({ x, y, width: ancho, height: alto, color: rgb(0.94, 0.99, 0.95), borderColor: VERDE, borderWidth: 1.2 });
+  const lineas = [
+    { texto: 'FIRMADO DIGITALMENTE', fuente: fuentes.negrita, tam: 8.5, dy: 13 },
+    { texto: `${fecha} ${hora.slice(0, 5)}`, fuente: fuentes.normal, tam: 8, dy: 24 },
+    { texto: `${firma.latitud.toFixed(5)}, ${firma.longitud.toFixed(5)}`, fuente: fuentes.normal, tam: 7, dy: 34 },
+  ];
+  for (const l of lineas) {
+    const anchoTexto = l.fuente.widthOfTextAtSize(l.texto, l.tam);
+    pagina.drawText(l.texto, { x: x + (ancho - anchoTexto) / 2, y: y + alto - l.dy, size: l.tam, font: l.fuente, color: VERDE });
+  }
+}
+
+/**
+ * Genera el PDF del convenio. Recibe la ficha completa (conveniosService.obtener). Devuelve los bytes.
+ * Opcional: `firma` = { fecha, firmante, latitud, longitud, precision_m, verificacion, trazado } para estamparla.
+ */
+export async function generarPdfConvenio(c, { firma = null } = {}) {
   const doc = await PDFDocument.create();
   const fuentes = {
     normal: await doc.embedFont(StandardFonts.Helvetica),
@@ -123,7 +222,7 @@ export async function generarPdfConvenio(c) {
   doc.setSubject(tipo);
   doc.setAuthor('Universidad Nacional de La Pampa');
   doc.setCreator('Sistema de Gestión de Convenios UNLPam');
-  doc.setKeywords([c.codigo, c.tipo, c.estado]);
+  doc.setKeywords([c.codigo, c.tipo, c.estado, ...(firma ? ['firmado digitalmente'] : [])]);
 
   const e = new Escritor(doc, fuentes);
 
@@ -199,7 +298,14 @@ export async function generarPdfConvenio(c) {
     `En prueba de conformidad, se firman ${Math.max(partes.length, 2)} ejemplares de un mismo tenor y a un solo efecto, en la ciudad de Santa Rosa, La Pampa.`,
   );
   e.y -= 30;
-  for (const p of partes.length ? partes : [{ nombre: 'Universidad Nacional de La Pampa' }]) {
+  const firmantes = partes.length ? partes : [{ nombre: 'Universidad Nacional de La Pampa' }];
+  // La firma de la app es la de la universidad: va sobre su línea (o sobre la primera, si no figura como parte).
+  const firmaDe = firma ? (firmantes.find((p) => /universidad nacional de la pampa/i.test(p.nombre)) ?? firmantes[0]) : null;
+  for (const p of firmantes) {
+    if (p === firmaDe) {
+      bloqueFirmado(e, p, firma);
+      continue;
+    }
     e.espacio(80);
     e.y -= 40;
     e.pagina.drawLine({ start: { x: MARGEN, y: e.y }, end: { x: MARGEN + 220, y: e.y }, thickness: 0.8, color: NEGRO });
@@ -208,14 +314,24 @@ export async function generarPdfConvenio(c) {
     e.parrafo('Firma y aclaración', { fuente: fuentes.cursiva, tam: 9, color: GRIS, despues: 10 });
   }
 
-  // Pie de página en todas las hojas
+  // Pie de página en todas las hojas (y, si está firmado, la leyenda de la firma arriba del pie)
   const paginas = doc.getPages();
+  const centrado = (pagina, texto, y, tam, color) => {
+    let tamano = tam;
+    while (fuentes.normal.widthOfTextAtSize(texto, tamano) > ANCHO - 2 * MARGEN && tamano > 5) tamano -= 0.5;
+    const ancho = fuentes.normal.widthOfTextAtSize(texto, tamano);
+    pagina.drawText(texto, { x: (ANCHO - ancho) / 2, y, size: tamano, font: fuentes.normal, color });
+  };
+  const leyenda = firma
+    ? seguro(
+        `Firmado digitalmente por ${firma.firmante.nombre} el ${fechaHora(firma.fecha).fecha} a las ${fechaHora(firma.fecha).hora} · ${textoUbicacion(firma)}`,
+      )
+    : null;
   paginas.forEach((pagina, i) => {
-    const texto = seguro(`${c.codigo} · Página ${i + 1} de ${paginas.length} · Sistema de Gestión de Convenios UNLPam`);
-    const tam = 8;
-    const ancho = fuentes.normal.widthOfTextAtSize(texto, tam);
-    pagina.drawText(texto, { x: (ANCHO - ancho) / 2, y: MARGEN / 2, size: tam, font: fuentes.normal, color: GRIS });
+    centrado(pagina, seguro(`${c.codigo} · Página ${i + 1} de ${paginas.length} · Sistema de Gestión de Convenios UNLPam`), MARGEN / 2, 8, GRIS);
+    if (leyenda) centrado(pagina, leyenda, MARGEN / 2 + 11, 7.5, VERDE);
   });
+  if (firma) sello(paginas[0], fuentes, firma);
 
   return doc.save();
 }

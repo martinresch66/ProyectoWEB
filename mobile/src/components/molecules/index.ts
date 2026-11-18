@@ -12,3 +12,4 @@ export * from './SegmentedControl';
 export * from './VigenciaBadge';
 export * from './MovimientoItem';
 export * from './StatBox';
+export * from './SignaturePad';

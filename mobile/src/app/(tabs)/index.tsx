@@ -8,6 +8,8 @@ import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ROLES } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
+import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
+import type { IndicadorResumen } from '@/models';
 import { resumenService } from '@/services/resumen.service';
 import { useAppTheme } from '@/theme';
 import { primerNombre } from '@/utils/format';
@@ -27,9 +29,16 @@ export default function HomeScreen() {
   const { usuario } = useAuth();
   const router = useRouter();
   const { data, loading, error, reload } = useAsync(() => resumenService.obtener(), []);
+  // Al volver al Inicio (por ejemplo, después de firmar), se actualizan los números.
+  useRecargarAlVolver(reload);
 
   const abrirConvenio = (id: number) => router.push({ pathname: '/convenio/[id]', params: { id: String(id) } });
   const irAFirmar = () => router.navigate('/firmar');
+  // "Esperando firma" lleva al Firmador si el rol firma; los demás boxes abren el listado de ese indicador.
+  const abrirIndicador = (indicador: IndicadorResumen) => {
+    if (indicador === 'por_firmar' && data?.puede_firmar) return irAFirmar();
+    router.push({ pathname: '/indicador/[clave]', params: { clave: indicador } });
+  };
 
   // Primera carga fallida: no hay nada que mostrar.
   if (error && !data) {
@@ -65,7 +74,7 @@ export default function HomeScreen() {
       {/* Si falla al actualizar, se siguen mostrando los datos anteriores con un aviso. */}
       {error && data && <Banner tone="warning" message={`No se pudo actualizar: ${error}`} />}
 
-      <ResumenGrid totales={data?.totales ?? null} onPressPorFirmar={irAFirmar} />
+      <ResumenGrid totales={data?.totales ?? null} onPressIndicador={abrirIndicador} />
 
       {data?.puede_firmar && (
         <View>

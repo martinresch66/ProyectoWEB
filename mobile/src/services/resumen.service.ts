@@ -1,4 +1,4 @@
-import type { ResumenInicio } from '@/models';
+import type { IndicadorResumen, ListadoIndicador, ResumenInicio } from '@/models';
 
 import { apiRequest } from './api/client';
 import { ENDPOINTS } from './api/endpoints';
@@ -7,5 +7,10 @@ import { ENDPOINTS } from './api/endpoints';
 export const resumenService = {
   obtener(): Promise<ResumenInicio> {
     return apiRequest<ResumenInicio>(ENDPOINTS.resumen);
+  },
+
+  /** Convenios de un box del Inicio (firmados, vigentes, en trámite, esperando firma…). */
+  listar(indicador: IndicadorResumen): Promise<ListadoIndicador> {
+    return apiRequest<ListadoIndicador>(ENDPOINTS.indicador(indicador));
   },
 };

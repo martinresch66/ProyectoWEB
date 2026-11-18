@@ -68,6 +68,7 @@ function RootNavigator() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="convenio/[id]" options={{ title: 'Ficha del convenio' }} />
           <Stack.Screen name="documento/[id]" options={{ title: 'Documento' }} />
+          <Stack.Screen name="indicador/[clave]" options={{ title: 'Convenios' }} />
           <Stack.Screen name="identidad" options={{ title: 'Registrar mi identidad' }} />
           <Stack.Screen name="ayuda" options={{ title: 'Ayuda' }} />
           <Stack.Screen name="componentes" options={{ title: 'Componentes (Atomic Design)' }} />

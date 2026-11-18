@@ -49,3 +49,16 @@ export interface ResumenInicio {
   /** Un ítem por convenio (su último movimiento), máximo 10, del más reciente al más antiguo. */
   ultimos_movimientos: Movimiento[];
 }
+
+
+/** Boxes del Inicio que se pueden tocar para ver sus convenios (GET /mobile/resumen/:indicador). */
+export type IndicadorResumen = 'firmados' | 'vigentes' | 'proximos' | 'en_tramite' | 'por_firmar';
+
+/** Convenios de un box del Inicio: salen de la misma condición que el número del box. */
+export interface ListadoIndicador {
+  indicador: IndicadorResumen;
+  titulo: string;
+  descripcion: string;
+  total: number;
+  convenios: Convenio[];
+}

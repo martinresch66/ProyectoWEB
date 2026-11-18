@@ -29,6 +29,14 @@ const TABLAS = [
   'notificaciones',
 ];
 
+/**
+ * Consultas con filtro, para no traer toda una tabla. Las firmas hechas desde la app se guardan en
+ * registros_auditoria (accion = 'firmar_convenio') y quedan en memoria como db.firmas.
+ */
+const CONSULTAS = {
+  firmas: "SELECT * FROM `registros_auditoria` WHERE `accion` = 'firmar_convenio'",
+};
+
 let pool = null;
 
 /** Pool de conexiones. dateStrings: las fechas llegan como texto ("2026-11-17"), igual que en el JSON de Laravel. */
@@ -56,14 +64,32 @@ const telefonoPorEmail = Object.fromEntries(
 let ultimaLectura = 0;
 let lecturaEnCurso = null;
 
+/** La columna detalles es JSON: MySQL la puede devolver como texto. */
+function leerJson(valor) {
+  if (typeof valor !== 'string') return valor ?? {};
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return {};
+  }
+}
+
 /** Lee todas las tablas y reemplaza los datos en memoria de una sola vez. */
 export async function leerBase() {
-  const resultados = await Promise.all(TABLAS.map((tabla) => conexion().query(`SELECT * FROM \`${tabla}\``)));
-  const tablas = Object.fromEntries(TABLAS.map((tabla, i) => [tabla, resultados[i][0].map(normalizarFila)]));
+  const consultas = { ...Object.fromEntries(TABLAS.map((tabla) => [tabla, `SELECT * FROM \`${tabla}\``])), ...CONSULTAS };
+  const nombres = Object.keys(consultas);
+  const resultados = await Promise.all(nombres.map((nombre) => conexion().query(consultas[nombre])));
+  const tablas = Object.fromEntries(nombres.map((nombre, i) => [nombre, resultados[i][0].map(normalizarFila)]));
   tablas.usuarios = tablas.usuarios.map((u) => ({ ...u, telefono: telefonoPorEmail[u.email] ?? null }));
+  tablas.firmas = tablas.firmas.map((f) => ({ ...f, detalles: leerJson(f.detalles) }));
   reemplazarTablas(tablas);
   ultimaLectura = Date.now();
   return tablas;
+}
+
+/** Después de escribir en la base (ej: una firma), obliga a releerla en el próximo pedido. */
+export function invalidarLectura() {
+  ultimaLectura = 0;
 }
 
 /** Vuelve a leer la base si pasaron más de 2 s. Si llegan varios pedidos juntos, comparten la misma lectura. */

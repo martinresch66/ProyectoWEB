@@ -7,6 +7,7 @@ import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
+import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
 import type { ConvenioRelacionado } from '@/models';
 import { conveniosService } from '@/services/convenios.service';
 import { useAppTheme } from '@/theme';
@@ -59,6 +60,8 @@ export default function ConvenioDetalleScreen() {
   const { data: c, loading, error, reload } = useAsync(() => conveniosService.obtener(id), [id]);
   const router = useRouter();
   const { usuario } = useAuth();
+  // Al volver del documento (por ejemplo, después de firmar), se actualiza el estado del convenio.
+  useRecargarAlVolver(reload);
 
   if (loading && !c) {
     return <ActivityIndicator color={colors.primary} style={{ flex: 1, backgroundColor: colors.background }} />;

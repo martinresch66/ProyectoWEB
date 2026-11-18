@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 
 import { AppText, Button, IconButton } from '@/components/atoms';
-import { EmptyState } from '@/components/molecules';
+import { Banner, EmptyState } from '@/components/molecules';
+import { FirmaModal, type DatosFirma } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ROLES_QUE_FIRMAN } from '@/domain/dominio';
@@ -14,7 +15,9 @@ import { useAsync } from '@/hooks/useAsync';
 import type { ConvenioFicha } from '@/models';
 import { conveniosService } from '@/services/convenios.service';
 import { documentosService, URL_VISOR } from '@/services/documentos.service';
+import { firmaService } from '@/services/firma.service';
 import { useAppTheme } from '@/theme';
+import { formatDateTime } from '@/utils/format';
 
 /** Mensajes que manda el visor (mobile/api/public/visor/index.html). */
 type MensajeVisor =
@@ -31,13 +34,15 @@ const mensajeDe = (e: unknown) => (e instanceof Error ? e.message : 'Ocurrió un
  * 1. Se descarga el PDF con el token (documentosService) al caché del celular.
  * 2. El WebView abre el visor de la API y, cuando avisa que está preparado, se le pasa el PDF.
  * 3. El zoom es el de dos dedos. "Firmar" se habilita recién cuando el visor avisa que se llegó al final.
+ * 4. Firmar abre el FirmaModal (firma manuscrita + ubicación + huella). Al terminar se recarga la ficha:
+ *    el convenio pasa a "firmado" y se descarga el PDF firmado, con la fecha, la hora, la latitud y la longitud.
  */
 export default function DocumentoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing, isDark } = useAppTheme();
   const { usuario } = useAuth();
   const margenes = useSafeAreaInsets();
-   const visor = useRef<WebView<unknown>>(null);
+  const visor = useRef<WebView<unknown>>(null);
 
   const ficha = useAsync(() => conveniosService.obtener(id), [id]);
   const convenio = ficha.data;
@@ -46,8 +51,12 @@ export default function DocumentoScreen() {
   const [visorPreparado, setVisorPreparado] = useState(false);
   const [paginas, setPaginas] = useState({ actual: 1, total: 0 });
   const [leyoTodo, setLeyoTodo] = useState(false);
+  const [firmando, setFirmando] = useState(false);
 
   const puedeFirmar = convenio?.estado === 'aprobado' && !!usuario && ROLES_QUE_FIRMAN.includes(usuario.rol);
+  // Si ya está firmado, quién, cuándo y dónde (solo si se firmó desde la app).
+  const firmado = convenio?.estado === 'firmado';
+  const firma = useAsync(() => (firmado ? firmaService.obtener(Number(id)) : Promise.resolve(null)), [id, firmado]);
 
   // 1) Con los datos del convenio, se descarga el PDF.
   useEffect(() => {
@@ -92,9 +101,15 @@ export default function DocumentoScreen() {
     }
   }
 
-  function firmar() {
-    // Punto 3: firma con huella, firma manuscrita y ubicación.
-    Alert.alert('Firmar convenio', 'La firma con huella y firma manuscrita se agrega en el próximo paso.');
+  /** La manda el FirmaModal con la firma, la ubicación y la huella ya confirmada. */
+  async function enviarFirma(datos: DatosFirma) {
+    if (!convenio) return;
+    // Se manda la versión que se leyó: si alguien cambió el convenio en el medio, la API responde 409.
+    await firmaService.firmar(convenio.id, { ...datos, version: convenio.version });
+    setFirmando(false);
+    // Se recarga la ficha: pasa a "firmado" y el efecto 1 descarga el PDF firmado.
+    ficha.reload();
+    Alert.alert('Convenio firmado', 'El documento ya muestra tu firma con la fecha, la hora y el lugar.');
   }
 
   function reintentar() {
@@ -166,6 +181,13 @@ export default function DocumentoScreen() {
         <AppText variant="caption" color="textSecondary" accessibilityLiveRegion="polite">
           {paginas.total ? `Página ${paginas.actual} de ${paginas.total} · Pellizcá para hacer zoom` : 'Cargando el documento…'}
         </AppText>
+        {firma.data && (
+          <Banner
+            tone="success"
+            title={`Firmado por ${firma.data.firmante.nombre}`}
+            message={`${formatDateTime(firma.data.fecha)} · Lat ${firma.data.latitud.toFixed(5)}, Long ${firma.data.longitud.toFixed(5)}`}
+          />
+        )}
         {puedeFirmar && (
           <>
             {!leyoTodo && (
@@ -173,10 +195,19 @@ export default function DocumentoScreen() {
                 Leé el convenio hasta el final para poder firmarlo.
               </AppText>
             )}
-            <Button title="Firmar convenio" icon="create-outline" onPress={firmar} disabled={!leyoTodo} fullWidth />
+            <Button title="Firmar convenio" icon="create-outline" onPress={() => setFirmando(true)} disabled={!leyoTodo} fullWidth />
           </>
         )}
       </View>
+
+      {firmando && convenio && (
+        <FirmaModal
+          convenio={convenio}
+          firmante={usuario?.nombre ?? ''}
+          onCancel={() => setFirmando(false)}
+          onConfirm={enviarFirma}
+        />
+      )}
     </View>
   );
 }

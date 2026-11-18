@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 /**
  * Configuración de la API. Los valores se pueden cambiar con un archivo api/.env
  * (ver .env.example). Los valores por defecto sirven para desarrollo.
@@ -21,6 +23,14 @@ export const env = {
   },
   /** Cada cuánto, como máximo, se vuelven a leer las tablas de MySQL (los cambios de la web se ven después de esto). */
   mysqlRecargaMs: 2000,
+
+  
+  /**
+   * Carpeta donde se guardan los PDF firmados. Por defecto, la misma que usa Laravel para los documentos
+   * (backend/storage/app/private), así la web también puede descargar lo que se firma desde la app.
+   */
+  documentosDir: process.env.DOCUMENTOS_DIR ?? fileURLToPath(new URL('../../../../backend/storage/app/private/', import.meta.url)),
+  
 
   /** Clave para firmar los JWT. En producción se debe definir JWT_SECRET. */
   jwtSecret: process.env.JWT_SECRET ?? 'dev-secret-cambiar-en-produccion',
