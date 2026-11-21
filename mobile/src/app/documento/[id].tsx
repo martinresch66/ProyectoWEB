@@ -16,6 +16,7 @@ import type { ConvenioFicha } from '@/models';
 import { conveniosService } from '@/services/convenios.service';
 import { documentosService, URL_VISOR } from '@/services/documentos.service';
 import { firmaService } from '@/services/firma.service';
+import { identidadService } from '@/services/identidad.service';
 import { useAppTheme } from '@/theme';
 import { formatDateTime } from '@/utils/format';
 
@@ -45,6 +46,8 @@ export default function DocumentoScreen() {
   const visor = useRef<WebView<unknown>>(null);
 
   const ficha = useAsync(() => conveniosService.obtener(id), [id]);
+  // Firma guardada en "Registrar mi identidad", para usarla con un toque al firmar.
+  const identidad = useAsync(() => identidadService.obtener(usuario?.id ?? 0), [usuario?.id]);
   const convenio = ficha.data;
   const [archivo, setArchivo] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -204,6 +207,7 @@ export default function DocumentoScreen() {
         <FirmaModal
           convenio={convenio}
           firmante={usuario?.nombre ?? ''}
+          firmaGuardada={identidad.data?.firma ?? null}
           onCancel={() => setFirmando(false)}
           onConfirm={enviarFirma}
         />

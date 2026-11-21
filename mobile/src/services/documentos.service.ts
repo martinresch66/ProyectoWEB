@@ -40,7 +40,8 @@ export const documentosService = {
     const archivo = new File(Paths.cache, `${convenio.codigo}.pdf`);
     if (archivo.exists) archivo.delete();
     archivo.create();
-    archivo.write(new Uint8Array(await res.arrayBuffer()));
+    // write es asíncrono: se espera a que termine antes de devolver el archivo.
+    await archivo.write(new Uint8Array(await res.arrayBuffer()));
     return archivo;
   },
 

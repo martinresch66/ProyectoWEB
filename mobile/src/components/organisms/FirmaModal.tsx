@@ -7,6 +7,7 @@ import type { FirmaDibujada, MetodoVerificacion, Ubicacion } from '@/models';
 import { autenticarConBiometria, obtenerBiometria, type BiometriaInfo } from '@/services/biometrics';
 import { obtenerUbicacion } from '@/services/ubicacion.service';
 import { useAppTheme } from '@/theme';
+import { ajustarFirma } from '@/utils/firma';
 
 import { AppText, Button, Icon, IconButton } from '../atoms';
 import { Banner, FIRMA_VACIA, puntosDeFirma, SignaturePad } from '../molecules';
@@ -25,6 +26,8 @@ export interface FirmaModalProps {
   convenio: { codigo: string; titulo: string };
   /** Nombre de quien firma (el usuario de la sesión). */
   firmante: string;
+  /** Firma guardada en "Registrar mi identidad": si existe, se puede usar con un toque. */
+  firmaGuardada?: FirmaDibujada | null;
   onCancel: () => void;
   /** Envía la firma. Si falla, el mensaje de error se muestra en el modal para reintentar. */
   onConfirm: (datos: DatosFirma) => Promise<void>;
@@ -50,7 +53,7 @@ function Paso({ numero, titulo, accion }: { numero: number; titulo: string; acci
  * 1. Firma manuscrita en el recuadro.  2. Ubicación (se busca sola al abrir).  3. Confirmación con la huella.
  * Se muestra solo mientras está montado: la pantalla lo agrega al tocar "Firmar" y lo saca al terminar.
  */
-export function FirmaModal({ convenio, firmante, onCancel, onConfirm }: FirmaModalProps) {
+export function FirmaModal({ convenio, firmante, firmaGuardada = null, onCancel, onConfirm }: FirmaModalProps) {
   const { colors, spacing } = useAppTheme();
   const [firma, setFirma] = useState<FirmaDibujada>(FIRMA_VACIA);
   const [enviando, setEnviando] = useState(false);
@@ -113,9 +116,16 @@ export function FirmaModal({ convenio, firmante, onCancel, onConfirm }: FirmaMod
           <Paso
             numero={1}
             titulo="Tu firma"
-            accion={
-              firma.trazos.length > 0 && !enviando ? (
+                        accion={
+              enviando ? undefined : firma.trazos.length > 0 ? (
                 <Button title="Borrar" icon="trash-outline" variant="ghost" onPress={() => setFirma((f) => ({ ...f, trazos: [] }))} />
+              ) : firmaGuardada ? (
+                <Button
+                  title="Usar mi firma"
+                  icon="create-outline"
+                  variant="ghost"
+                  onPress={() => setFirma((f) => ({ ...f, trazos: ajustarFirma(firmaGuardada, f.ancho, f.alto) }))}
+                />
               ) : undefined
             }
           />

@@ -27,7 +27,7 @@ export interface SignaturePadProps {
 }
 
 /** Trazo → camino SVG ("M x y L x y …"). Un toque sin mover el dedo se dibuja como un punto. */
-function aCamino([primero, ...resto]: Trazo): string {
+export function aCamino([primero, ...resto]: Trazo): string {
   if (!primero) return '';
   if (!resto.length) return `M ${primero[0]} ${primero[1]} l 0.1 0`;
   return `M ${primero[0]} ${primero[1]} ${resto.map(([x, y]) => `L ${x} ${y}`).join(' ')}`;
