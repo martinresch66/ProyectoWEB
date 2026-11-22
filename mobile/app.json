@@ -24,7 +24,7 @@
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
+        "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
@@ -41,8 +41,23 @@
       "expo-secure-store",
       "expo-sharing",
       "expo-mail-composer",
-      "expo-mail-composer",
-      "expo-location"
+      "expo-location",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "La app usa la cámara para registrar tu rostro.",
+          "photosPermission": "La app usa tus fotos para elegir tu foto de perfil.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

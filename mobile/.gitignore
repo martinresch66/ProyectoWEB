@@ -49,3 +49,7 @@ api/.data/
 
 # Configuración local de Claude Code
 .claude/launch.json
+
+# Carpetas nativas generadas por "expo prebuild"
+/android
+/ios

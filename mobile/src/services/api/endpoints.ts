@@ -3,6 +3,8 @@
  * Son relativas a env.apiUrl (ej.: http://192.168.0.10:4000/api).
  * Si el backend de Laravel termina usando otros nombres, se cambian acá.
  */
+
+
 const id = (valor: number | string) => encodeURIComponent(String(valor));
 
 export const ENDPOINTS = {
@@ -25,6 +27,9 @@ export const ENDPOINTS = {
   pdfConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/pdf`,
   firmaConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/firma`,
   comentarios: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/comentarios`,
+  documentosConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/documentos`,
+  documento: (documentoId: number | string) => `/mobile/documentos/${id(documentoId)}`,
+  pdfDocumento: (documentoId: number | string) => `/mobile/documentos/${id(documentoId)}/pdf`,
 
   // Convenios (§4)
   convenios: '/agreements',

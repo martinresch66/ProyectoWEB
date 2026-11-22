@@ -1,5 +1,6 @@
 export * from './comentario';
 export * from './convenio';
+export * from './documento';
 export * from './firma';
 export * from './identidad';
 export * from './resumen';
