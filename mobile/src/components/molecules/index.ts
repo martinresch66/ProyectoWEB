@@ -15,3 +15,4 @@ export * from './StatBox';
 export * from './SignaturePad';
 export * from './FirmaPreview';
 export * from './IdentidadCard';
+export * from './ComentarioItem';

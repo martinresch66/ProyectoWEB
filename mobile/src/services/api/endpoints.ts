@@ -24,6 +24,7 @@ export const ENDPOINTS = {
   indicador: (clave: string) => `/mobile/resumen/${id(clave)}`,
   pdfConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/pdf`,
   firmaConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/firma`,
+  comentarios: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/comentarios`,
 
   // Convenios (§4)
   convenios: '/agreements',

@@ -13,3 +13,5 @@ mobileRouter.get('/resumen/:indicador', mobileController.indicador);
 mobileRouter.get('/convenios/:id/pdf', mobileController.pdfConvenio);
 mobileRouter.get('/convenios/:id/firma', mobileController.firma);
 mobileRouter.post('/convenios/:id/firma', mobileController.firmar);
+mobileRouter.get('/convenios/:id/comentarios', mobileController.comentarios);
+mobileRouter.post('/convenios/:id/comentarios', mobileController.comentar);

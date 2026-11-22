@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Icon, type IconName } from '@/components/atoms';
-import { EmptyState, EstadoBadge, SectionHeader, VigenciaBadge } from '@/components/molecules';
+import { EmptyState, EstadoBadge, ListItem, SectionHeader, VigenciaBadge } from '@/components/molecules';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
@@ -104,6 +104,15 @@ export default function ConvenioDetalleScreen() {
         variant={puedeFirmar ? 'primary' : 'secondary'}
         onPress={() => router.push({ pathname: '/documento/[id]', params: { id: String(c.id) } })}
       />
+
+      <Card style={{ paddingVertical: spacing.xs }}>
+        <ListItem
+          icon="chatbubbles-outline"
+          title="Comentarios"
+          subtitle="Conversá con los demás usuarios sobre este convenio"
+          onPress={() => router.push({ pathname: '/comentarios/[id]', params: { id: String(c.id) } })}
+        />
+      </Card>
 
       <Card style={{ gap: spacing.md }}>
         {c.resumen && <InfoRow icon="document-text-outline" label="Resumen" value={c.resumen} />}
