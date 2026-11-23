@@ -31,8 +31,9 @@ export interface SignaturePadProps {
 /**
  * Trazo → camino SVG suavizado: curvas que pasan por el punto medio entre cada par de puntos,
  * así la línea sale redondeada y no en zigzag. Un toque sin mover el dedo se dibuja como un punto.
+ * También lo usa FirmaPreview para mostrar la firma guardada.
  */
-function aCamino(trazo: Trazo): string {
+export function aCamino(trazo: Trazo): string {
   const [primero] = trazo;
   if (!primero) return '';
   if (trazo.length === 1) return `M ${primero[0]} ${primero[1]} l 0.1 0`;

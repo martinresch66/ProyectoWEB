@@ -17,6 +17,10 @@ export function errorHandler(err, req, res, next) {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ message: 'El cuerpo de la petición no es un JSON válido.' });
   }
+    // Archivo más grande que el límite (ej: un PDF de más de 20 MB)
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ message: 'El archivo supera el máximo permitido (20 MB).' });
+  }
   const status = err.status ?? 500;
   // 503 (servicio no disponible, ej: MySQL apagado) muestra su mensaje; el resto de los 5xx, uno genérico.
   const interno = status >= 500 && status !== 503;

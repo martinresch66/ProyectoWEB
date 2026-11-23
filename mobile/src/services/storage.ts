@@ -59,4 +59,9 @@ export const storage = {
 
 export const StorageKeys = {
   preferences: 'preferences',
+  recordatorios: 'recordatorios',
+  /** Última consulta de novedades de cada usuario: novedades:<id> */
+  novedades: (usuarioId: number) => `novedades:${usuarioId}`,
+  /** Nombre del archivo de la foto de perfil de cada usuario: fotoPerfil:<id> */
+  fotoPerfil: (usuarioId: number) => `fotoPerfil:${usuarioId}`,
 } as const;

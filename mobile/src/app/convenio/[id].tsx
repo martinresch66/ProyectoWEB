@@ -2,10 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Icon, type IconName } from '@/components/atoms';
-import { EmptyState, EstadoBadge, SectionHeader, VigenciaBadge } from '@/components/molecules';
+import { EmptyState, EstadoBadge, ListItem, SectionHeader, VigenciaBadge } from '@/components/molecules';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
-import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
+import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, ROLES_QUE_SUBEN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
 import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
 import type { ConvenioRelacionado } from '@/models';
@@ -83,6 +83,7 @@ export default function ConvenioDetalleScreen() {
   const pasantia = c.detalle_pasantia;
   const pendientes = c.observaciones.filter((o) => !Number(o.esta_resuelta));
   const puedeFirmar = c.estado === 'aprobado' && !!usuario && ROLES_QUE_FIRMAN.includes(usuario.rol);
+  const puedeSubir = !!usuario && ROLES_QUE_SUBEN.includes(usuario.rol);
 
   return (
     <Screen refreshing={loading} onRefresh={reload}>
@@ -104,6 +105,15 @@ export default function ConvenioDetalleScreen() {
         variant={puedeFirmar ? 'primary' : 'secondary'}
         onPress={() => router.push({ pathname: '/documento/[id]', params: { id: String(c.id) } })}
       />
+
+      <Card style={{ paddingVertical: spacing.xs }}>
+        <ListItem
+          icon="chatbubbles-outline"
+          title="Comentarios"
+          subtitle="Conversá con los demás usuarios sobre este convenio"
+          onPress={() => router.push({ pathname: '/comentarios/[id]', params: { id: String(c.id) } })}
+        />
+      </Card>
 
       <Card style={{ gap: spacing.md }}>
         {c.resumen && <InfoRow icon="document-text-outline" label="Resumen" value={c.resumen} />}
@@ -197,11 +207,20 @@ export default function ConvenioDetalleScreen() {
       )}
 
       <View>
-        <SectionHeader title="Documentos" />
+        <SectionHeader
+          title="Documentos"
+          actionLabel={puedeSubir ? 'Subir PDF' : undefined}
+          onAction={() => router.push({ pathname: '/subir/[id]', params: { id: String(c.id) } })}
+        />
         <Card style={{ gap: spacing.md }}>
           {c.documentos.length ? (
             c.documentos.map((d) => (
-              <View key={d.id} style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+              <Pressable
+                key={d.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir ${d.nombre_original}`}
+                onPress={() => router.push({ pathname: '/archivo/[id]', params: { id: String(d.id) } })}
+                style={({ pressed }) => ({ flexDirection: 'row', gap: spacing.md, alignItems: 'center', opacity: pressed ? 0.6 : 1 })}>
                 <Icon name="document-attach-outline" size={18} color="danger" />
                 <View style={{ flex: 1 }}>
                   <AppText numberOfLines={1}>{d.nombre_original}</AppText>
@@ -212,7 +231,8 @@ export default function ConvenioDetalleScreen() {
                     Subido por {d.usuario?.nombre ?? '—'} el {formatDateTime(d.creado_en)}
                   </AppText>
                 </View>
-              </View>
+                <Icon name="chevron-forward" size={18} color="textMuted" />
+              </Pressable>
             ))
           ) : (
             <AppText color="textSecondary">Sin documentos.</AppText>
@@ -246,10 +266,6 @@ export default function ConvenioDetalleScreen() {
           )}
         </Card>
       </View>
-
-      <AppText variant="caption" color="textMuted" align="center">
-        El visor de PDF, compartir y la firma llegan en las etapas 4 y 5.
-      </AppText>
     </Screen>
   );
 }

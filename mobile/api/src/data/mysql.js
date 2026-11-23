@@ -27,6 +27,29 @@ const TABLAS = [
   'transiciones_estado',
   'observaciones_revision',
   'notificaciones',
+  'comentarios',
+];
+
+/**
+ * Tablas que agrega la app y no están en el seed de Martín. Se crean solas (si no existen) la primera vez
+ * que se lee la base. El mismo SQL está en database/comentarios.sql.
+ * Si una de estas falta, no frena al resto: se lee como vacía.
+ */
+const TABLAS_OPCIONALES = ['comentarios'];
+const TABLAS_DE_LA_APP = [
+  `CREATE TABLE IF NOT EXISTS comentarios (
+    id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    convenio_id bigint(20) UNSIGNED NOT NULL,
+    usuario_id bigint(20) UNSIGNED NOT NULL,
+    texto text NOT NULL,
+    es_ofensivo tinyint(1) NOT NULL DEFAULT 0,
+    creado_en timestamp NULL DEFAULT current_timestamp(),
+    PRIMARY KEY (id),
+    KEY convenio_id (convenio_id),
+    KEY usuario_id (usuario_id),
+    CONSTRAINT comentarios_ibfk_1 FOREIGN KEY (convenio_id) REFERENCES convenios (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT comentarios_ibfk_2 FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON UPDATE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 /**
@@ -63,6 +86,18 @@ const telefonoPorEmail = Object.fromEntries(
 
 let ultimaLectura = 0;
 let lecturaEnCurso = null;
+let esquemaListo = false;
+
+/** Crea las tablas de la app si faltan. Si no se puede (ej: MySQL apagado), se reintenta en la próxima lectura. */
+async function asegurarEsquema() {
+  if (esquemaListo) return;
+  try {
+    for (const sql of TABLAS_DE_LA_APP) await conexion().query(sql);
+    esquemaListo = true;
+  } catch (error) {
+    if (error.code !== 'ECONNREFUSED') console.warn(`[MySQL] No se pudo crear la tabla de comentarios: ${error.code ?? error.message}`);
+  }
+}
 
 /** La columna detalles es JSON: MySQL la puede devolver como texto. */
 function leerJson(valor) {
@@ -76,9 +111,19 @@ function leerJson(valor) {
 
 /** Lee todas las tablas y reemplaza los datos en memoria de una sola vez. */
 export async function leerBase() {
+  await asegurarEsquema();
   const consultas = { ...Object.fromEntries(TABLAS.map((tabla) => [tabla, `SELECT * FROM \`${tabla}\``])), ...CONSULTAS };
   const nombres = Object.keys(consultas);
-  const resultados = await Promise.all(nombres.map((nombre) => conexion().query(consultas[nombre])));
+  const resultados = await Promise.all(
+    nombres.map((nombre) =>
+      conexion()
+        .query(consultas[nombre])
+        .catch((error) => {
+          if (TABLAS_OPCIONALES.includes(nombre) && error.code === 'ER_NO_SUCH_TABLE') return [[]];
+          throw error;
+        }),
+    ),
+  );
   const tablas = Object.fromEntries(nombres.map((nombre, i) => [nombre, resultados[i][0].map(normalizarFila)]));
   tablas.usuarios = tablas.usuarios.map((u) => ({ ...u, telefono: telefonoPorEmail[u.email] ?? null }));
   tablas.firmas = tablas.firmas.map((f) => ({ ...f, detalles: leerJson(f.detalles) }));

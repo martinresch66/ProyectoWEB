@@ -1,7 +1,10 @@
 import { conveniosService } from '../services/convenios.service.js';
+import { documentosService } from '../services/documentos.service.js';
 import { firmaService } from '../services/firma.service.js';
 import { generarPdfConvenio } from '../services/pdfConvenio.service.js';
+import { novedadesService } from '../services/novedades.service.js';
 import { resumenService } from '../services/resumen.service.js';
+import { comentariosService } from '../services/comentarios.service.js';
 
 /** Controlador de las rutas que solo usa la app móvil (/api/mobile/...). */
 export const mobileController = {
@@ -13,6 +16,11 @@ export const mobileController = {
   /** GET /mobile/resumen/:indicador → los convenios de un box del Inicio (firmados, vigentes, en_tramite…). */
   indicador(req, res) {
     res.json(resumenService.listar(req.user, req.params.indicador));
+  },
+
+  /** GET /mobile/novedades?desde=ISO → lo que pasó desde esa fecha, para las notificaciones de la app. */
+  novedades(req, res) {
+    res.json(novedadesService.listar(req.user, req.query.desde));
   },
 
   /**
@@ -31,6 +39,41 @@ export const mobileController = {
     res.json(firmaService.obtener(req.user, req.params.id));
   },
 
+  /** GET /mobile/convenios/:id/comentarios → comentarios del convenio (del más nuevo al más viejo). */
+  comentarios(req, res) {
+    res.json(comentariosService.listar(req.user, req.params.id));
+  },
+
+  /** POST /mobile/convenios/:id/comentarios → publica un comentario (si es ofensivo, se marca solo). */
+  async comentar(req, res) {
+    res.status(201).json(await comentariosService.crear(req.user, req.params.id, req.body));
+  },
+
+    /**
+   * POST /mobile/convenios/:id/documentos?tipo=anexo&nombre=archivo.pdf → sube un PDF (el cuerpo es el archivo).
+   * La API le pone la marca en los metadatos y lo guarda.
+   */
+  async subirDocumento(req, res) {
+    const resultado = await documentosService.subir(req.user, req.params.id, req.body, {
+      tipo: req.query.tipo,
+      nombre: req.query.nombre,
+      ip: req.ip ?? null,
+      agente: req.get('user-agent') ?? null,
+    });
+    res.status(201).json(resultado);
+  },
+
+  /** GET /mobile/documentos/:id → datos del documento, la marca leída del archivo y si está íntegro. */
+  async documento(req, res) {
+    res.json(await documentosService.detalle(req.user, req.params.id));
+  },
+
+  /** GET /mobile/documentos/:id/pdf → el archivo PDF guardado. */
+  async pdfDocumento(req, res) {
+    const { bytes, nombre } = await documentosService.pdf(req.user, req.params.id);
+    res.type('application/pdf').set('Content-Disposition', `inline; filename="${encodeURIComponent(nombre)}"`).send(bytes);
+  },
+  
   /** POST /mobile/convenios/:id/firma → firma el convenio (huella + firma manuscrita + ubicación). */
   async firmar(req, res) {
     const resultado = await firmaService.firmar(req.user, req.params.id, req.body, {

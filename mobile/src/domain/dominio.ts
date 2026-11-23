@@ -113,3 +113,10 @@ export function formatearMonto(valor: number | null | undefined): string {
 
 /** Roles que registran la firma (aprobado → firmado), igual que en la web y en la API. */
 export const ROLES_QUE_FIRMAN: Rol[] = ['admin', 'gestion'];
+
+
+/** Roles que suben documentos desde la app (igual que Laravel). Gestión, solo a los convenios de su unidad. */
+export const ROLES_QUE_SUBEN: Rol[] = ['admin', 'gestion', 'revision'];
+
+/** Tipos que se pueden subir desde la app (el convenio firmado lo genera la firma, no se sube). */
+export const TIPOS_SUBIDA: TipoDocumento[] = ['anexo', 'dictamen', 'resolucion', 'acta_pasantia', 'otro'];
