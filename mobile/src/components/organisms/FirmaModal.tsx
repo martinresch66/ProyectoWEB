@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Modal, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAsync } from '@/hooks/useAsync';
@@ -53,6 +53,8 @@ function Paso({ numero, titulo, accion }: { numero: number; titulo: string; acci
 export function FirmaModal({ convenio, firmante, onCancel, onConfirm }: FirmaModalProps) {
   const { colors, spacing } = useAppTheme();
   const [firma, setFirma] = useState<FirmaDibujada>(FIRMA_VACIA);
+  const { height: altoPantalla } = useWindowDimensions();
+  const altoRecuadro = Math.round(Math.min(260, Math.max(160, altoPantalla * 0.28)));
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,18 +116,22 @@ export function FirmaModal({ convenio, firmante, onCancel, onConfirm }: FirmaMod
             numero={1}
             titulo="Tu firma"
             accion={
-              firma.trazos.length > 0 && !enviando ? (
+              // El botón ocupa siempre su lugar (invisible mientras no hay firma): si apareciera recién al
+              // empezar a firmar, empujaría el recuadro hacia abajo en medio del trazo y la firma saldría corrida.
+              <View
+                pointerEvents={firma.trazos.length > 0 && !enviando ? 'auto' : 'none'}
+                importantForAccessibility={firma.trazos.length > 0 && !enviando ? 'auto' : 'no-hide-descendants'}
+                accessibilityElementsHidden={!(firma.trazos.length > 0 && !enviando)}
+                style={{ opacity: firma.trazos.length > 0 && !enviando ? 1 : 0 }}>
                 <Button title="Borrar" icon="trash-outline" variant="ghost" onPress={() => setFirma((f) => ({ ...f, trazos: [] }))} />
-              ) : undefined
+              </View>
             }
           />
-          {/* El recuadro ocupa el lugar libre (entre 140 y 260 de alto), así el modal entra en pantallas chicas. */}
-          <SignaturePad
-            value={firma}
-            onChange={setFirma}
-            disabled={enviando}
-            style={{ flexGrow: 1, minHeight: 140, maxHeight: 260 }}
-          />
+          {/*
+            Alto FIJO (según la pantalla, entre 160 y 260): si fuera elástico, cualquier cosa que aparece o
+            desaparece abajo (la ubicación, el aviso "Dibujá tu firma…") lo estiraría mientras se firma.
+          */}
+          <SignaturePad value={firma} onChange={setFirma} disabled={enviando} style={{ height: altoRecuadro }} />
 
           <Paso numero={2} titulo="Ubicación" />
           {ubicacion.data ? (
@@ -176,11 +182,10 @@ export function FirmaModal({ convenio, firmante, onCancel, onConfirm }: FirmaMod
             disabled={!listo}
             fullWidth
           />
-          {!hayFirma && (
-            <AppText variant="caption" color="textMuted" align="center">
-              Dibujá tu firma en el recuadro para continuar.
-            </AppText>
-          )}
+          {/* Siempre ocupa su lugar (invisible cuando ya hay firma), así no cambia nada de tamaño al firmar. */}
+          <AppText variant="caption" color="textMuted" align="center" style={{ opacity: hayFirma ? 0 : 1 }}>
+            Dibujá tu firma en el recuadro para continuar.
+          </AppText>
         </View>
       </SafeAreaView>
     </Modal>
