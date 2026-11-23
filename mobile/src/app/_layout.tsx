@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { BotonAyuda } from '@/components/organisms';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { inicializarNotificaciones } from '@/services/notifications';
@@ -66,14 +67,14 @@ function RootNavigator() {
         }}>
         <Stack.Protected guard={conSesion}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="convenio/[id]" options={{ title: 'Ficha del convenio' }} />
-          <Stack.Screen name="documento/[id]" options={{ title: 'Documento' }} />
-          <Stack.Screen name="indicador/[clave]" options={{ title: 'Convenios' }} />
-          <Stack.Screen name="comentarios/[id]" options={{ title: 'Comentarios' }} />
-          <Stack.Screen name="subir/[id]" options={{ title: 'Subir documentación' }} />
-          <Stack.Screen name="archivo/[id]" options={{ title: 'Documento' }} />
-          <Stack.Screen name="identidad" options={{ title: 'Registrar mi identidad' }} />
-          <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
+          <Stack.Screen name="convenio/[id]" options={{ title: 'Ficha del convenio', headerRight: () => <BotonAyuda seccion="convenio" /> }} />
+          <Stack.Screen name="documento/[id]" options={{ title: 'Documento', headerRight: () => <BotonAyuda seccion="documento" /> }} />
+          <Stack.Screen name="indicador/[clave]" options={{ title: 'Convenios', headerRight: () => <BotonAyuda seccion="inicio" /> }} />
+          <Stack.Screen name="comentarios/[id]" options={{ title: 'Comentarios', headerRight: () => <BotonAyuda seccion="comentarios" /> }} />
+          <Stack.Screen name="subir/[id]" options={{ title: 'Subir documentación', headerRight: () => <BotonAyuda seccion="subir" /> }} />
+          <Stack.Screen name="archivo/[id]" options={{ title: 'Documento', headerRight: () => <BotonAyuda seccion="archivo" /> }} />
+          <Stack.Screen name="identidad" options={{ title: 'Registrar mi identidad', headerRight: () => <BotonAyuda seccion="identidad" /> }} />
+          <Stack.Screen name="avisos" options={{ title: 'Avisos', headerRight: () => <BotonAyuda seccion="avisos" /> }} />
           <Stack.Screen name="ayuda" options={{ title: 'Ayuda' }} />
           <Stack.Screen name="componentes" options={{ title: 'Componentes (Atomic Design)' }} />
           <Stack.Screen

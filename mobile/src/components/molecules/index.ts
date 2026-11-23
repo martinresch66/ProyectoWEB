@@ -17,3 +17,5 @@ export * from './FirmaPreview';
 export * from './IdentidadCard';
 export * from './ComentarioItem';
 export * from './NovedadItem';
+export * from './Desplegable';
+export * from './ListaPasos';

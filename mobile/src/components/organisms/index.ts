@@ -4,3 +4,5 @@ export * from './ConvenioList';
 export * from './ResumenGrid';
 export * from './FirmaModal';
 export * from './VisorPdf';
+export * from './AyudaModal';
+

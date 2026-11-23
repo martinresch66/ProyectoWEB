@@ -40,7 +40,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Inicio',
-          header: () => <AppHeader title="Inicio" />,
+          header: () => <AppHeader title="Inicio" ayuda="inicio" />,
           tabBarIcon: tabIcon('home', 'home-outline'),
         }}
       />
@@ -48,7 +48,7 @@ export default function TabsLayout() {
         name="buscar"
         options={{
           title: 'Buscar',
-          header: () => <AppHeader title="Buscar" showSearch={false} />,
+          header: () => <AppHeader title="Buscar" showSearch={false} ayuda="buscar" />,
           tabBarIcon: tabIcon('search', 'search-outline'),
         }}
       />
@@ -56,7 +56,7 @@ export default function TabsLayout() {
         name="firmar"
         options={{
           title: 'Firmar',
-          header: () => <AppHeader title="Por firmar" />,
+          header: () => <AppHeader title="Por firmar" ayuda="firmar" />,
           tabBarIcon: tabIcon('create', 'create-outline'),
         }}
       />
@@ -64,7 +64,7 @@ export default function TabsLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          header: () => <AppHeader title="Mi Perfil" showSearch={false} />,
+          header: () => <AppHeader title="Mi Perfil" showSearch={false} ayuda="perfil" />,
           tabBarIcon: tabIcon('person-circle', 'person-circle-outline'),
         }}
       />

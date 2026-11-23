@@ -3,16 +3,21 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import type { SeccionAyuda } from '@/domain/ayuda';
 import { useAvisos } from '@/services/avisos.store';
+import { useFotoPerfil } from '@/services/fotoPerfil.service';
 import { useAppTheme } from '@/theme';
 
 import { AppText, Avatar, IconButton } from '../atoms';
 import { SearchBar } from '../molecules';
+import { BotonAyuda } from './AyudaModal';
 
 export interface AppHeaderProps {
   title: string;
   /** Muestra el buscador en el header (requerimiento: "el buscador debe aparecer en el header"). */
   showSearch?: boolean;
+  /** Ayuda de la pantalla: muestra el botón "?" (ayuda contextual del T2). */
+  ayuda?: SeccionAyuda;
 }
 
 /**
@@ -20,12 +25,13 @@ export interface AppHeaderProps {
  * Combina título + campanita de avisos + avatar (átomos) + SearchBar (molécula).
  * Al buscar, lleva a la pantalla Buscar con el texto ingresado.
  */
-export function AppHeader({ title, showSearch = true }: AppHeaderProps) {
+export function AppHeader({ title, showSearch = true, ayuda }: AppHeaderProps) {
   const { colors, spacing, radius } = useAppTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { usuario } = useAuth();
   const { sinLeer } = useAvisos();
+  const foto = useFotoPerfil(usuario?.id ?? null);
 
   return (
     <View
@@ -43,6 +49,7 @@ export function AppHeader({ title, showSearch = true }: AppHeaderProps) {
           {title}
         </AppText>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          {ayuda && <BotonAyuda seccion={ayuda} />}
           <View>
             <IconButton
               icon={sinLeer > 0 ? 'notifications' : 'notifications-outline'}
@@ -78,7 +85,7 @@ export function AppHeader({ title, showSearch = true }: AppHeaderProps) {
             accessibilityRole="button"
             accessibilityLabel="Ir a Mi Perfil"
             hitSlop={8}>
-            <Avatar name={usuario?.nombre ?? ''} size={36} />
+            <Avatar name={usuario?.nombre ?? ''} uri={foto} size={36} />
           </Pressable>
         </View>
       </View>

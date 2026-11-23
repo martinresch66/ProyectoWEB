@@ -8,6 +8,8 @@ import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ROLES } from '@/domain/dominio';
 import { avisosStore, useAvisos, type FrecuenciaRecordatorio } from '@/services/avisos.store';
+import { elegirFotoPerfil, type OrigenFoto } from '@/services/camara.service';
+import { fotoPerfilService, useFotoPerfil } from '@/services/fotoPerfil.service';
 import { mostrarNotificacion } from '@/services/notifications';
 import { useAppTheme, type FontSizeOption, type ThemeMode } from '@/theme';
 import { confirmar, mensajeDeError } from '@/utils/confirm';
@@ -17,7 +19,7 @@ import { confirmar, mensajeDeError } from '@/utils/confirm';
  * - Datos del usuario logueado.
  * - Apariencia: modo claro/oscuro y tamaño de letra (se aplican en toda la app).
  * - Seguridad: ingreso con huella y cerrar sesión.
- * Etapa 7: foto de perfil.
+  * - Foto de perfil: miniatura guardada en el celular (cámara o galería).
  */
 export default function PerfilScreen() {
   const { mode, setMode, fontSize, setFontSize, spacing, colors } = useAppTheme();
@@ -27,6 +29,39 @@ export default function PerfilScreen() {
   const [cambiandoHuella, setCambiandoHuella] = useState(false);
   const { frecuencia } = useAvisos();
   const [sinPermiso, setSinPermiso] = useState(false);
+
+  const foto = useFotoPerfil(usuario?.id ?? null);
+  const [cambiandoFoto, setCambiandoFoto] = useState<OrigenFoto | 'quitar' | null>(null);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+
+  async function cambiarFoto(origen: OrigenFoto) {
+    if (!usuario) return;
+    setErrorFoto(null);
+    setCambiandoFoto(origen);
+    try {
+      const temporal = await elegirFotoPerfil(origen);
+      if (temporal) await fotoPerfilService.guardar(usuario.id, temporal);
+    } catch (err) {
+      setErrorFoto(mensajeDeError(err));
+    } finally {
+      setCambiandoFoto(null);
+    }
+  }
+
+  async function quitarFoto() {
+    if (!usuario) return;
+    const ok = await confirmar('Quitar foto de perfil', 'Vas a volver a ver tus iniciales.', 'Quitar');
+    if (!ok) return;
+    setErrorFoto(null);
+    setCambiandoFoto('quitar');
+    try {
+      await fotoPerfilService.quitar(usuario.id);
+    } catch (err) {
+      setErrorFoto(mensajeDeError(err));
+    } finally {
+      setCambiandoFoto(null);
+    }
+  }
 
   async function probarNotificacion() {
     const ok = await mostrarNotificacion(
@@ -70,19 +105,58 @@ export default function PerfilScreen() {
 
   return (
     <Screen>
-      <Card>
+      <Card style={{ gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.lg }}>
-          <Avatar name={usuario.nombre} size={64} />
+          <Avatar name={usuario.nombre} uri={foto} size={72} />
           <View style={{ flex: 1 }}>
             <AppText variant="subtitle">{usuario.nombre}</AppText>
             <AppText variant="caption" color="textSecondary">
               {ROLES[usuario.rol] ?? usuario.rol} · {usuario.unidad?.nombre ?? 'Alcance global'}
             </AppText>
-            <AppText variant="caption" color="textMuted">
+                        <AppText variant="caption" color="textMuted">
               {usuario.email}
             </AppText>
           </View>
         </View>
+        {errorFoto && <Banner tone="danger" message={errorFoto} />}
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Cámara"
+              icon="camera-outline"
+              variant="secondary"
+              onPress={() => cambiarFoto('camara')}
+              loading={cambiandoFoto === 'camara'}
+              disabled={cambiandoFoto !== null}
+              fullWidth
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              title="Galería"
+              icon="images-outline"
+              variant="secondary"
+              onPress={() => cambiarFoto('galeria')}
+              loading={cambiandoFoto === 'galeria'}
+              disabled={cambiandoFoto !== null}
+              fullWidth
+            />
+          </View>
+        </View>
+        {foto && (
+          <Button
+            title="Quitar foto"
+            icon="trash-outline"
+            variant="ghost"
+            onPress={quitarFoto}
+            loading={cambiandoFoto === 'quitar'}
+            disabled={cambiandoFoto !== null}
+            fullWidth
+          />
+        )}
+        <AppText variant="caption" color="textMuted">
+          Tu foto se guarda solo en este celular, recortada y en miniatura.
+        </AppText>
       </Card>
 
       <Card style={{ gap: spacing.md }}>
