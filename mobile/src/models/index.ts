@@ -3,5 +3,6 @@ export * from './convenio';
 export * from './documento';
 export * from './firma';
 export * from './identidad';
+export * from './novedad';
 export * from './resumen';
 export * from './usuario';

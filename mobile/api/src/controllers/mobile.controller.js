@@ -2,6 +2,7 @@ import { conveniosService } from '../services/convenios.service.js';
 import { documentosService } from '../services/documentos.service.js';
 import { firmaService } from '../services/firma.service.js';
 import { generarPdfConvenio } from '../services/pdfConvenio.service.js';
+import { novedadesService } from '../services/novedades.service.js';
 import { resumenService } from '../services/resumen.service.js';
 import { comentariosService } from '../services/comentarios.service.js';
 
@@ -15,6 +16,11 @@ export const mobileController = {
   /** GET /mobile/resumen/:indicador → los convenios de un box del Inicio (firmados, vigentes, en_tramite…). */
   indicador(req, res) {
     res.json(resumenService.listar(req.user, req.params.indicador));
+  },
+
+  /** GET /mobile/novedades?desde=ISO → lo que pasó desde esa fecha, para las notificaciones de la app. */
+  novedades(req, res) {
+    res.json(novedadesService.listar(req.user, req.query.desde));
   },
 
   /**

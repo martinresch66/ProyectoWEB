@@ -59,4 +59,7 @@ export const storage = {
 
 export const StorageKeys = {
   preferences: 'preferences',
+  recordatorios: 'recordatorios',
+  /** Última consulta de novedades de cada usuario: novedades:<id> */
+  novedades: (usuarioId: number) => `novedades:${usuarioId}`,
 } as const;

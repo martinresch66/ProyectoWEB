@@ -5,6 +5,7 @@ import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/organisms';
+import { useNotificacionesApp } from '@/hooks/useNotificacionesApp';
 import { useAppTheme } from '@/theme';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
@@ -19,6 +20,7 @@ function tabIcon(active: IoniconName, inactive: IoniconName) {
 export default function TabsLayout() {
   const { colors, typography } = useAppTheme();
   const insets = useSafeAreaInsets();
+  useNotificacionesApp();
 
   return (
     <Tabs

@@ -73,6 +73,7 @@ function RootNavigator() {
           <Stack.Screen name="subir/[id]" options={{ title: 'Subir documentación' }} />
           <Stack.Screen name="archivo/[id]" options={{ title: 'Documento' }} />
           <Stack.Screen name="identidad" options={{ title: 'Registrar mi identidad' }} />
+          <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
           <Stack.Screen name="ayuda" options={{ title: 'Ayuda' }} />
           <Stack.Screen name="componentes" options={{ title: 'Componentes (Atomic Design)' }} />
           <Stack.Screen

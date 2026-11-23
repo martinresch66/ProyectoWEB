@@ -24,6 +24,7 @@ export const ENDPOINTS = {
   // Solo de la app móvil: Inicio, PDF y firma
   resumen: '/mobile/resumen',
   indicador: (clave: string) => `/mobile/resumen/${id(clave)}`,
+  novedades: '/mobile/novedades',
   pdfConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/pdf`,
   firmaConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/firma`,
   comentarios: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/comentarios`,
