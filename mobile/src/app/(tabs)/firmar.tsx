@@ -1,9 +1,15 @@
+import { useRouter } from 'expo-router';
+
 import { AppText } from '@/components/atoms';
 import { EmptyState } from '@/components/molecules';
-import { ConvenioList } from '@/components/organisms';
+import { ConvenioList, PendientesOffline } from '@/components/organisms';
 import { Screen } from '@/components/templates';
+import { useAuth } from '@/context/AuthContext';
+import { ROLES_QUE_FIRMAN } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
+import { usePendientesOffline } from '@/hooks/usePendientesOffline';
 import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
+import { useConexion } from '@/services/conexion.store';
 import { resumenService } from '@/services/resumen.service';
 
 /**
@@ -11,12 +17,29 @@ import { resumenService } from '@/services/resumen.service';
  * Usa los pendientes de GET /mobile/resumen (la API ya filtra por rol y unidad).
  * Al tocar uno se abre la ficha (procedencia, partes firmantes, fechas, convenio padre)
  * y desde ahí "Leer y firmar" abre el PDF.
+ * Sin conexión (modo offline) se muestran los pendientes guardados en el celular: se pueden leer, no firmar.
  */
 export default function FirmarScreen() {
+  const router = useRouter();
+  const { usuario } = useAuth();
   const { data, loading, error, reload } = useAsync(() => resumenService.obtener(), []);
 
   // Al volver de firmar, el convenio firmado deja de aparecer en la lista.
   useRecargarAlVolver(reload);
+  const { sinConexion } = useConexion(reload);
+  const guardados = usePendientesOffline(data);
+
+  if (sinConexion) {
+    return (
+      <Screen refreshing={false} onRefresh={reload}>
+        <PendientesOffline
+          guardados={guardados}
+          puedeFirmar={!!usuario && ROLES_QUE_FIRMAN.includes(usuario.rol)}
+          onAbrir={(id) => router.push({ pathname: '/convenio/[id]', params: { id: String(id) } })}
+        />
+      </Screen>
+    );
+  }
 
   if (data && !data.puede_firmar) {
     return (

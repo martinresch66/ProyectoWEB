@@ -1,5 +1,6 @@
 import { env } from '@/config/env';
 
+import { conexionStore } from '../conexion.store';
 /** Error de la API con un mensaje listo para mostrar al usuario. */
 export class ApiError extends Error {
   constructor(
@@ -11,6 +12,14 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+}
+
+/** No hubo respuesta de la API (sin internet, sin Wi-Fi, API apagada o tardó más de 10 s). Modo offline. */
+export class SinConexionError extends ApiError {
+  constructor(message = 'Sin conexión con la API.') {
+    super(message, null);
+    this.name = 'SinConexionError';
   }
 }
 
@@ -65,7 +74,7 @@ async function send(path: string, { method = 'GET', query, body }: RequestOption
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), env.requestTimeoutMs);
   try {
-    return await fetch(buildUrl(path, query), {
+    const res = await fetch(buildUrl(path, query), {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -73,12 +82,14 @@ async function send(path: string, { method = 'GET', query, body }: RequestOption
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
+            signal: controller.signal,
     });
+    conexionStore.respondio();
+    return res;
   } catch {
-    throw new ApiError(
+    conexionStore.sinRespuesta();
+    throw new SinConexionError(
       `No se pudo conectar con la API (${env.apiUrl}). Verificá que esté corriendo y que el celular esté en la misma red Wi-Fi.`,
-      null,
     );
   } finally {
     clearTimeout(timeout);

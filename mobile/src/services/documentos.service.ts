@@ -7,8 +7,9 @@ import * as Sharing from 'expo-sharing';
 import { env } from '@/config/env';
 import type { DetalleDocumento, ResultadoSubida, TipoDocumento } from '@/models';
 
-import { ApiError, apiRequest, tokenDeSesion } from './api/client';
+import { ApiError, apiRequest, SinConexionError, tokenDeSesion } from './api/client';
 import { ENDPOINTS } from './api/endpoints';
+import { conexionStore } from './conexion.store';
 
 /** Página del visor de PDF que sirve la API (mobile/api/public/visor). Está fuera de /api. */
 export const URL_VISOR = `${env.apiUrl.replace(/\/api$/, '')}/visor/index.html`;
@@ -29,13 +30,16 @@ type CuerpoFetch = NonNullable<Parameters<typeof fetch>[1]>['body'];
 /** Pedido a la API con el token. Si el token venció, se renueva una vez y se reintenta, igual que apiRequest. */
 async function pedirConToken(path: string, init: { method?: string; headers?: Record<string, string>; body?: CuerpoFetch } = {}) {
   const enviar = async (token: string | null) => {
-    try {
-      return await fetch(`${env.apiUrl}${path}`, {
+        try {
+      const res = await fetch(`${env.apiUrl}${path}`, {
         ...init,
         headers: { ...init.headers, ...(token && { Authorization: `Bearer ${token}` }) },
       });
+      conexionStore.respondio();
+      return res;
     } catch {
-      throw new ApiError('No se pudo conectar con la API. Verificá la conexión.', null);
+      conexionStore.sinRespuesta();
+      throw new SinConexionError('No se pudo conectar con la API. Verificá la conexión.');
     }
   };
   const res = await enviar(await tokenDeSesion());
@@ -72,9 +76,9 @@ async function descargarPdf(path: string, nombreArchivo: string): Promise<File> 
  * Los PDF descargados se guardan en el caché de la app (el sistema los puede borrar cuando necesita espacio).
  */
 export const documentosService = {
-  /** El PDF del convenio (el firmado, si ya se firmó). */
-  descargarConvenio(convenio: { id: number; codigo: string }): Promise<File> {
-    return descargarPdf(ENDPOINTS.pdfConvenio(convenio.id), `${convenio.codigo}.pdf`);
+  /** El PDF del convenio (el firmado, si ya se firmó). `nombreArchivo`: con qué nombre se guarda en el caché. */
+  descargarConvenio(convenio: { id: number; codigo: string }, nombreArchivo = `${convenio.codigo}.pdf`): Promise<File> {
+    return descargarPdf(ENDPOINTS.pdfConvenio(convenio.id), nombreArchivo);
   },
 
   /** Un documento subido (anexo, dictamen…). Si el archivo cambió desde que se subió, la API no lo entrega. */

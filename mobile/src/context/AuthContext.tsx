@@ -6,6 +6,7 @@ import { ApiError, configureApiAuth } from '@/services/api/client';
 import { authService, type EnvioCodigoRespuesta } from '@/services/auth.service';
 import { autenticarConBiometria, obtenerBiometria, type BiometriaInfo } from '@/services/biometrics';
 import { mostrarNotificacion } from '@/services/notifications';
+import { offlineService } from '@/services/offline.service';
 import { SecureKeys, secureStorage } from '@/services/secureStorage';
 import { storage } from '@/services/storage';
 import { generarId } from '@/utils/id';
@@ -91,9 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEstado('con_sesion');
   }, []);
 
-  const limpiarSesion = useCallback(async () => {
+    const limpiarSesion = useCallback(async () => {
+    const usuarioId = sesionRef.current?.user.id;
     sesionRef.current = null;
     await secureStorage.remove(SecureKeys.session);
+    // Los convenios guardados para usar sin conexión se borran del celular al cerrar la sesión.
+    if (usuarioId) offlineService.borrar(usuarioId);
     setUsuario(null);
     setOfrecerHuella(false);
     setEstado('sin_sesion');

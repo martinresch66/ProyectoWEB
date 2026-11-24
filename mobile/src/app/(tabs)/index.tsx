@@ -3,13 +3,15 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { AppText, Button, Card } from '@/components/atoms';
 import { Banner, ConvenioCard, EmptyState, MovimientoItem, SectionHeader } from '@/components/molecules';
-import { ResumenGrid } from '@/components/organisms';
+import { PendientesOffline, ResumenGrid } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
-import { ROLES } from '@/domain/dominio';
+import { ROLES, ROLES_QUE_FIRMAN } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
+import { usePendientesOffline } from '@/hooks/usePendientesOffline';
 import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
 import type { IndicadorResumen } from '@/models';
+import { useConexion } from '@/services/conexion.store';
 import { resumenService } from '@/services/resumen.service';
 import { useAppTheme } from '@/theme';
 import { primerNombre } from '@/utils/format';
@@ -31,6 +33,9 @@ export default function HomeScreen() {
   const { data, loading, error, reload } = useAsync(() => resumenService.obtener(), []);
   // Al volver al Inicio (por ejemplo, después de firmar), se actualizan los números.
   useRecargarAlVolver(reload);
+  // Modo offline: cuando vuelve la conexión se recarga solo; mientras tanto, solo los pendientes guardados.
+  const { sinConexion } = useConexion(reload);
+  const guardados = usePendientesOffline(data);
 
   const abrirConvenio = (id: number) => router.push({ pathname: '/convenio/[id]', params: { id: String(id) } });
   const irAFirmar = () => router.navigate('/firmar');
@@ -39,6 +44,18 @@ export default function HomeScreen() {
     if (indicador === 'por_firmar' && data?.puede_firmar) return irAFirmar();
     router.push({ pathname: '/indicador/[clave]', params: { clave: indicador } });
   };
+
+  if (sinConexion) {
+    return (
+      <Screen refreshing={false} onRefresh={reload}>
+        <PendientesOffline
+          guardados={guardados}
+          puedeFirmar={!!usuario && ROLES_QUE_FIRMAN.includes(usuario.rol)}
+          onAbrir={abrirConvenio}
+        />
+      </Screen>
+    );
+  }
 
   // Primera carga fallida: no hay nada que mostrar.
   if (error && !data) {

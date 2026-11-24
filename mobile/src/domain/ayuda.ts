@@ -140,7 +140,10 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
       '"Últimos movimientos" muestra lo último que pasó en cada convenio. Tocá uno para abrir su ficha.',
       'Deslizá hacia abajo para actualizar.',
     ],
-    consejos: ['La campanita de arriba muestra los avisos nuevos.'],
+    consejos: [
+      'La campanita de arriba muestra los avisos nuevos.',
+      'Sin conexión, el Inicio muestra solo los convenios pendientes de firma guardados en el celular.',
+    ],
   },
   buscar: {
     titulo: 'Buscar',
@@ -168,6 +171,7 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
     consejos: [
       'Solo administración y gestión firman. Los demás roles ven un aviso.',
       'Si registrás tu identidad, podés usar tu firma guardada con un toque.',
+      'Sin conexión podés leer los pendientes guardados, pero para firmar necesitás conexión.',
     ],
   },
   perfil: {

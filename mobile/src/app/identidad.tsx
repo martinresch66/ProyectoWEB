@@ -6,6 +6,7 @@ import { Banner, FIRMA_VACIA, FirmaPreview, IdentidadCard, puntosDeFirma, Signat
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { useAsync } from '@/hooks/useAsync';
+import { useConexion } from '@/services/conexion.store';
 import type { FirmaDibujada } from '@/models';
 import { autenticarConBiometria, obtenerBiometria } from '@/services/biometrics';
 import { tomarSelfie } from '@/services/camara.service';
@@ -29,6 +30,7 @@ const PUNTOS_MINIMOS = 10;
  */
 export default function IdentidadScreen() {
   const { usuario } = useAuth();
+  const { sinConexion } = useConexion();
   const { spacing } = useAppTheme();
   const usuarioId = usuario?.id ?? 0;
   const identidad = useAsync(() => identidadService.obtener(usuarioId), [usuarioId]);
@@ -167,6 +169,14 @@ export default function IdentidadScreen() {
         </AppText>
       </Card>
 
+      {sinConexion && (
+        <Banner
+          tone="warning"
+          title="Sin conexión"
+          message="Podés registrar tu identidad igual: se guarda solo en este celular. Para firmar un convenio sí vas a necesitar conexión."
+        />
+      )}
+      
       {aviso && <Banner tone={aviso.tono} message={aviso.texto} />}
       {identidad.error && <Banner tone="danger" message={identidad.error} />}
 

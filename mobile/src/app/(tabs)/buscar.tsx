@@ -4,12 +4,13 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Icon } from '@/components/atoms';
 import { EmptyState, SelectorFiltro, SearchBar, type OpcionFiltro } from '@/components/molecules';
-import { ArbolConvenios } from '@/components/organisms';
+import { ArbolConvenios, SinConexion } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { ESTADOS, TIPOS } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
 import type { EstadoConvenio, FiltrosBusqueda, TipoConvenio } from '@/models';
 import { busquedaService } from '@/services/busqueda.service';
+import { useConexion } from '@/services/conexion.store';
 import { useAppTheme } from '@/theme';
 
 type Filtros = Omit<FiltrosBusqueda, 'q'>;
@@ -61,11 +62,22 @@ export default function BuscarScreen() {
     [query, filtros.anio, filtros.tipo, filtros.estado, filtros.unidad_id, filtros.vigencia],
   );
 
+  const { sinConexion } = useConexion(resultado.reload);
+
   const cambiar = <K extends keyof Filtros>(clave: K) => (valor: Filtros[K]) => setFiltros((f) => ({ ...f, [clave]: valor }));
 
   const abrirConvenio = (id: number) => router.push({ pathname: '/convenio/[id]', params: { id: String(id) } });
   const abrirDocumento = (id: number) => router.push({ pathname: '/archivo/[id]', params: { id: String(id) } });
-
+  
+  // Modo offline: el buscador necesita conexión (al volver, busca solo).
+  if (sinConexion) {
+    return (
+      <Screen>
+        <SinConexion mensaje="El buscador necesita conexión." />
+      </Screen>
+    );
+  }
+  
   return (
     <Screen refreshing={resultado.loading && !!resultado.data} onRefresh={resultado.reload}>
       <SearchBar

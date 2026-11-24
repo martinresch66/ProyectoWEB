@@ -4,9 +4,11 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { AppText, Button, Card, Input } from '@/components/atoms';
 import { Banner, ComentarioItem, EmptyState } from '@/components/molecules';
+import { SinConexion } from '@/components/organisms';
 import { Screen } from '@/components/templates';
 import { useAsync } from '@/hooks/useAsync';
 import { comentariosService } from '@/services/comentarios.service';
+import { useConexion } from '@/services/conexion.store';
 import { useAppTheme, type Tone } from '@/theme';
 import { mensajeDeError } from '@/utils/confirm';
 
@@ -22,6 +24,7 @@ export default function ComentariosScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing } = useAppTheme();
   const { data, loading, error, reload } = useAsync(() => comentariosService.listar(id), [id]);
+  const { sinConexion } = useConexion(reload);
 
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -41,6 +44,15 @@ export default function ComentariosScreen() {
     } finally {
       setEnviando(false);
     }
+  }
+
+   // Modo offline: los comentarios necesitan conexión (al volver, se recargan solos).
+  if (sinConexion) {
+    return (
+      <Screen>
+        <SinConexion mensaje="Para ver y escribir comentarios necesitás conexión." />
+      </Screen>
+    );
   }
 
   // Primera carga fallida (sin datos que mostrar).

@@ -13,10 +13,12 @@ import { useAuth } from '@/context/AuthContext';
 import { ROLES_QUE_FIRMAN } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
 import type { ConvenioFicha } from '@/models';
-import { conveniosService } from '@/services/convenios.service';
+
 import { documentosService, URL_VISOR } from '@/services/documentos.service';
 import { firmaService } from '@/services/firma.service';
 import { identidadService } from '@/services/identidad.service';
+import { useConexion } from '@/services/conexion.store';
+import { offlineService } from '@/services/offline.service';  
 import { useAppTheme } from '@/theme';
 import { formatDateTime } from '@/utils/format';
 
@@ -45,7 +47,9 @@ export default function DocumentoScreen() {
   const margenes = useSafeAreaInsets();
   const visor = useRef<WebView<unknown>>(null);
 
-  const ficha = useAsync(() => conveniosService.obtener(id), [id]);
+  // Sin conexión: la ficha y el PDF guardados en el celular (modo offline). Firmar necesita conexión.
+  const { sinConexion } = useConexion();
+  const ficha = useAsync(() => offlineService.obtenerFicha(usuario?.id, id), [id]);
   // Firma guardada en "Registrar mi identidad", para usarla con un toque al firmar.
   const identidad = useAsync(() => identidadService.obtener(usuario?.id ?? 0), [usuario?.id]);
   const convenio = ficha.data;
@@ -65,14 +69,14 @@ export default function DocumentoScreen() {
   useEffect(() => {
     if (!convenio) return;
     let vigente = true;
-    documentosService.descargarConvenio(convenio).then(
+      offlineService.pdfConvenio(usuario?.id, convenio).then(
       (a) => vigente && setArchivo(a),
       (e) => vigente && setError(mensajeDe(e)),
     );
     return () => {
       vigente = false;
     };
-  }, [convenio]);
+  }, [convenio, usuario?.id]);
 
   // 2) Visor preparado + PDF descargado → se lo pasamos (y de nuevo si cambia el modo claro/oscuro).
   useEffect(() => {
@@ -130,7 +134,15 @@ export default function DocumentoScreen() {
           icon="alert-circle-outline"
           title="No se pudo abrir el documento"
           message={problema}
-          action={<Button title="Reintentar" icon="refresh" variant="secondary" onPress={reintentar} />}
+          action={
+            <View style={{ gap: spacing.sm }}>
+              {/* Sin conexión el visor puede no estar disponible: el PDF guardado se abre con otra app. */}
+              {sinConexion && archivo && (
+                <Button title="Abrir con otra app" icon="open-outline" onPress={() => compartirCon(documentosService.compartir)} />
+              )}
+              <Button title="Reintentar" icon="refresh" variant="secondary" onPress={reintentar} />
+            </View>
+          }
         />
       </Screen>
     );
@@ -164,10 +176,18 @@ export default function DocumentoScreen() {
         ref={visor}
         source={{ uri: URL_VISOR }}
         originWhitelist={['*']}
+        // Sin conexión, el visor se abre desde lo que el WebView guardó la última vez.
+        cacheMode={sinConexion ? 'LOAD_CACHE_ELSE_NETWORK' : 'LOAD_DEFAULT'}
         onMessage={alRecibirMensaje}
         setBuiltInZoomControls
         setDisplayZoomControls={false}
-        onError={() => setError(`No se pudo abrir el visor (${URL_VISOR}). Verificá que la API esté corriendo.`)}
+        onError={() =>
+          setError(
+            sinConexion
+              ? 'Sin conexión no se pudo abrir el visor. Podés abrir el PDF guardado con otra app.'
+              : `No se pudo abrir el visor (${URL_VISOR}). Verificá que la API esté corriendo.`,
+          )
+        }
         style={{ flex: 1, backgroundColor: colors.background }}
       />
 
@@ -193,12 +213,18 @@ export default function DocumentoScreen() {
         )}
         {puedeFirmar && (
           <>
+            {sinConexion && (
+              <AppText variant="caption" color="warning">
+                Sin conexión: vas a poder firmar cuando vuelva la conexión.
+              </AppText>
+            )}
+
             {!leyoTodo && (
               <AppText variant="caption" color="textMuted">
                 Leé el convenio hasta el final para poder firmarlo.
               </AppText>
             )}
-            <Button title="Firmar convenio" icon="create-outline" onPress={() => setFirmando(true)} disabled={!leyoTodo} fullWidth />
+            <Button title="Firmar convenio" icon="create-outline" onPress={() => setFirmando(true)} disabled={!leyoTodo || sinConexion} fullWidth />
           </>
         )}
       </View>

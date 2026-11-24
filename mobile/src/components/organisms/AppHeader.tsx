@@ -5,10 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import type { SeccionAyuda } from '@/domain/ayuda';
 import { useAvisos } from '@/services/avisos.store';
+import { useConexion } from '@/services/conexion.store';
 import { useFotoPerfil } from '@/services/fotoPerfil.service';
-import { useAppTheme } from '@/theme';
+import { toneColors, useAppTheme } from '@/theme';
 
-import { AppText, Avatar, IconButton } from '../atoms';
+import { AppText, Avatar, Icon, IconButton } from '../atoms';
 import { SearchBar } from '../molecules';
 import { BotonAyuda } from './AyudaModal';
 
@@ -32,6 +33,8 @@ export function AppHeader({ title, showSearch = true, ayuda }: AppHeaderProps) {
   const { usuario } = useAuth();
   const { sinLeer } = useAvisos();
   const foto = useFotoPerfil(usuario?.id ?? null);
+  const { sinConexion } = useConexion();
+  const aviso = toneColors(colors, 'warning');
 
   return (
     <View
@@ -89,7 +92,26 @@ export function AppHeader({ title, showSearch = true, ayuda }: AppHeaderProps) {
           </Pressable>
         </View>
       </View>
-      {showSearch && (
+            {sinConexion && (
+        <View
+          accessibilityRole="alert"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            backgroundColor: aviso.bg,
+            borderRadius: radius.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
+          }}>
+          <Icon name="cloud-offline-outline" size={16} rawColor={aviso.fg} />
+          <AppText variant="caption" style={{ color: aviso.fg, flex: 1 }}>
+            Sin conexión · Modo offline: solo los pendientes de firma
+          </AppText>
+        </View>
+      )}
+      {/* El buscador necesita conexión: sin conexión no se muestra. */}
+      {showSearch && !sinConexion && (
         <SearchBar
           clearOnSubmit
           onSubmit={(q) => router.navigate({ pathname: '/buscar', params: q ? { q } : {} })}

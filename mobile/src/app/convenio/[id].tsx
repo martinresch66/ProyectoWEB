@@ -2,14 +2,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Icon, type IconName } from '@/components/atoms';
-import { EmptyState, EstadoBadge, ListItem, SectionHeader, VigenciaBadge } from '@/components/molecules';
+import { Banner, EmptyState, EstadoBadge, ListItem, SectionHeader, VigenciaBadge } from '@/components/molecules';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
 import { ESTADOS, formatearBytes, formatearMonto, nombrePersona, ROLES_QUE_FIRMAN, ROLES_QUE_SUBEN, TIPOS, TIPOS_DOCUMENTO, TIPOS_VINCULO, TIPOS_VINCULO_INVERSO, } from '@/domain/dominio';
 import { useAsync } from '@/hooks/useAsync';
 import { useRecargarAlVolver } from '@/hooks/useRecargarAlVolver';
 import type { ConvenioRelacionado } from '@/models';
-import { conveniosService } from '@/services/convenios.service';
+import { useConexion } from '@/services/conexion.store';
+import { offlineService } from '@/services/offline.service';
 import { useAppTheme } from '@/theme';
 import { formatDate, formatDateTime } from '@/utils/format';
 
@@ -57,9 +58,11 @@ function ConvenioVinculado({ etiqueta, convenio }: { etiqueta: string; convenio:
 export default function ConvenioDetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, spacing } = useAppTheme();
-  const { data: c, loading, error, reload } = useAsync(() => conveniosService.obtener(id), [id]);
-  const router = useRouter();
   const { usuario } = useAuth();
+  // Sin conexión se muestra la ficha guardada en el celular (solo la de los pendientes de firma).
+  const { data: c, loading, error, reload } = useAsync(() => offlineService.obtenerFicha(usuario?.id, id), [id]);
+  const router = useRouter();
+  const { sinConexion } = useConexion(reload);
   // Al volver del documento (por ejemplo, después de firmar), se actualiza el estado del convenio.
   useRecargarAlVolver(reload);
 
@@ -71,8 +74,8 @@ export default function ConvenioDetalleScreen() {
     return (
       <Screen>
         <EmptyState
-          icon="alert-circle-outline"
-          title="No se pudo abrir el convenio"
+          icon={sinConexion ? 'cloud-offline-outline' : 'alert-circle-outline'}
+          title={sinConexion ? 'Sin conexión' : 'No se pudo abrir el convenio'}
           message={error ?? undefined}
           action={<Button title="Reintentar" icon="refresh" variant="secondary" onPress={reload} />}
         />
@@ -99,6 +102,14 @@ export default function ConvenioDetalleScreen() {
         </View>
       </View>
 
+      {sinConexion && (
+        <Banner
+          tone="warning"
+          title="Sin conexión"
+          message="Estás viendo los datos guardados en el celular. Para firmar, comentar o subir documentos necesitás conexión."
+        />
+      )}
+      
       <Button
         title={puedeFirmar ? 'Leer y firmar' : 'Ver el documento (PDF)'}
         icon={puedeFirmar ? 'create-outline' : 'document-text-outline'}

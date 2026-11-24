@@ -5,5 +5,6 @@ export * from './ResumenGrid';
 export * from './FirmaModal';
 export * from './VisorPdf';
 export * from './AyudaModal';
-
 export * from './ArbolConvenios';
+export * from './PendientesOffline';
+export * from './SinConexion';
