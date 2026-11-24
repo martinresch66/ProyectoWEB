@@ -11,6 +11,10 @@ import { EstadoBadge, VigenciaBadge } from '../molecules';
 export interface ArbolConveniosProps {
   /** Un árbol por familia de convenios (la raíz es el convenio padre de más arriba). */
   arboles: NodoConvenio[];
+  /** false cuando se listan todos (sin búsqueda): ahí todo coincide y la marca "Coincide" no aporta. */
+  marcarCoincidencias?: boolean;
+  /** Si las ramas arrancan desplegadas (al buscar) o plegadas (al listar todos). */
+  desplegados?: boolean;
   onAbrirConvenio: (id: number) => void;
   onAbrirDocumento: (id: number) => void;
 }
@@ -22,7 +26,13 @@ const contar = (n: NodoConvenio): number => 1 + n.hijos.reduce((t, h) => t + con
  * Convenio padre → convenios hijos (específicos, adendas…), y en cada uno sus resoluciones asignadas
  * y el resto de la documentación. Lo que cumple la búsqueda se marca; lo demás se muestra para dar contexto.
  */
-export function ArbolConvenios({ arboles, onAbrirConvenio, onAbrirDocumento }: ArbolConveniosProps) {
+export function ArbolConvenios({
+  arboles,
+  marcarCoincidencias = true,
+  desplegados = true,
+  onAbrirConvenio,
+  onAbrirDocumento,
+}: ArbolConveniosProps) {
   const { spacing } = useAppTheme();
   return (
     <View style={{ gap: spacing.md }}>
@@ -30,7 +40,9 @@ export function ArbolConvenios({ arboles, onAbrirConvenio, onAbrirDocumento }: A
         <Card key={raiz.convenio.id} style={{ padding: spacing.md }}>
           <Nodo
             nodo={raiz}
-            marcarCoincidencias={contar(raiz) > 1}
+            raiz
+            marcarCoincidencias={marcarCoincidencias && contar(raiz) > 1}
+            desplegado={desplegados}
             onAbrirConvenio={onAbrirConvenio}
             onAbrirDocumento={onAbrirDocumento}
           />
@@ -42,43 +54,47 @@ export function ArbolConvenios({ arboles, onAbrirConvenio, onAbrirDocumento }: A
 
 interface NodoProps {
   nodo: NodoConvenio;
+  /** Solo la raíz tiene la flecha para plegar o desplegar; los hijos se ven siempre desplegados. */
+  raiz?: boolean;
   /** Solo hace falta marcar "Coincide" cuando la familia tiene más de un convenio. */
   marcarCoincidencias: boolean;
+  /** Si arranca con sus ramas a la vista. */
+  desplegado: boolean;
   onAbrirConvenio: (id: number) => void;
   onAbrirDocumento: (id: number) => void;
 }
 
-function Nodo({ nodo, marcarCoincidencias, onAbrirConvenio, onAbrirDocumento }: NodoProps) {
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * Un convenio del árbol. Siempre tiene tres ramas, aunque estén vacías: Resoluciones, Documentación
+ * y Convenios hijos (que a su vez son nodos). Plegado, muestra un resumen con cuántos hay en cada una.
+ */
+function Nodo({ nodo, raiz = false, marcarCoincidencias, desplegado, onAbrirConvenio, onAbrirDocumento }: NodoProps) {
   const { colors, spacing } = useAppTheme();
-  const [abierto, setAbierto] = useState(true);
+  const [abiertoRaiz, setAbierto] = useState(desplegado);
+  // Solo la raíz se pliega y despliega: al desplegarla se ve toda la familia, con los hijos ya abiertos.
+  const abierto = raiz ? abiertoRaiz : true;
   const c = nodo.convenio;
-  const contenido = nodo.resoluciones.length + nodo.documentos.length + nodo.hijos.length;
+  const total = contar(nodo) - 1;
+  const resumen = [
+    plural(total, 'convenio hijo', 'convenios hijos'),
+    plural(nodo.resoluciones.length, 'resolución', 'resoluciones'),
+    plural(nodo.documentos.length, 'documento', 'documentos'),
+  ].join(' · ');
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs }}>
-        <Pressable
-          onPress={() => setAbierto((a) => !a)}
-          disabled={contenido === 0}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: abierto, disabled: contenido === 0 }}
-          accessibilityLabel={abierto ? `Plegar ${c.codigo}` : `Desplegar ${c.codigo}`}
-          hitSlop={8}
-          style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', opacity: contenido === 0 ? 0 : 1 }}>
-          <Icon name={abierto ? 'chevron-down' : 'chevron-forward'} size={18} color="textSecondary" />
-        </Pressable>
-
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }}>
+        {/* Toda la tarjeta (menos la flecha) abre el detalle del convenio. */}
         <Pressable
           onPress={() => onAbrirConvenio(c.id)}
           accessibilityRole="button"
           accessibilityLabel={`Abrir ${c.codigo}: ${c.titulo}`}
           style={({ pressed }) => ({ flex: 1, gap: spacing.xs, opacity: pressed ? 0.6 : 1 })}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <AppText variant="label" color="textMuted" style={{ flex: 1 }} numberOfLines={1}>
-              {c.codigo} · {TIPOS[c.tipo] ?? c.tipo}
-            </AppText>
-            <Icon name="chevron-forward" size={16} color="textMuted" />
-          </View>
+          <AppText variant="label" color="textMuted" numberOfLines={1}>
+            {c.codigo} · {TIPOS[c.tipo] ?? c.tipo}
+          </AppText>
           <AppText variant="bodyStrong" numberOfLines={2} style={{ color: nodo.coincide ? colors.text : colors.textSecondary }}>
             {c.titulo}
           </AppText>
@@ -92,54 +108,74 @@ function Nodo({ nodo, marcarCoincidencias, onAbrirConvenio, onAbrirDocumento }: 
             <EstadoBadge estado={c.estado} />
             <VigenciaBadge convenio={c} />
           </View>
+          {!abierto && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Icon name="git-network-outline" size={14} color="textMuted" />
+              <AppText variant="caption" color="textMuted">
+                {resumen}
+              </AppText>
+            </View>
+          )}
         </Pressable>
+
+        {raiz && (
+          // Flecha: para arriba = plegado; al tocarla apunta para abajo y se despliega todo el árbol.
+          <Pressable
+            onPress={() => setAbierto((a) => !a)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: abierto }}
+            accessibilityLabel={abierto ? `Plegar el árbol de ${c.codigo}` : `Desplegar el árbol de ${c.codigo}: ${resumen}`}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: abierto ? colors.primarySoft : colors.surfaceAlt,
+              opacity: pressed ? 0.6 : 1,
+            })}>
+            <Icon name={abierto ? 'chevron-down' : 'chevron-up'} size={20} color={abierto ? 'primary' : 'textSecondary'} />
+          </Pressable>
+        )}
       </View>
 
-      {abierto && contenido > 0 && (
+      {abierto && (
         // Línea guía a la izquierda: todo lo que está adentro pertenece a este convenio.
-        <View style={{ marginLeft: 13, paddingLeft: spacing.md + 2, borderLeftWidth: 2, borderLeftColor: colors.border, gap: spacing.md }}>
-          {nodo.resoluciones.length > 0 && (
-            <Grupo icono="ribbon-outline" titulo={`Resoluciones (${nodo.resoluciones.length})`}>
-              {nodo.resoluciones.map((d) => (
-                <FilaDocumento key={d.id} documento={d} icono="ribbon-outline" onPress={() => onAbrirDocumento(d.id)} />
-              ))}
-            </Grupo>
-          )}
-          {nodo.documentos.length > 0 && (
-            <Grupo icono="folder-open-outline" titulo={`Documentación (${nodo.documentos.length})`}>
-              {nodo.documentos.map((d) => (
-                <FilaDocumento key={d.id} documento={d} icono="document-attach-outline" onPress={() => onAbrirDocumento(d.id)} />
-              ))}
-            </Grupo>
-          )}
-          {nodo.resoluciones.length === 0 && nodo.documentos.length === 0 && (
-            <AppText variant="caption" color="textMuted">
-              Sin resoluciones ni documentos cargados.
-            </AppText>
-          )}
-          {nodo.hijos.map((hijo) => (
-            <View key={hijo.convenio.id} style={{ gap: spacing.xs }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Icon name="git-branch-outline" size={14} color="textMuted" />
+        <View style={{ marginLeft: 2, paddingLeft: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.border, gap: spacing.md }}>
+          <Grupo icono="ribbon-outline" titulo={`Resoluciones asignadas (${nodo.resoluciones.length})`} vacio="Sin resoluciones asignadas.">
+            {nodo.resoluciones.map((d) => (
+              <FilaDocumento key={d.id} documento={d} icono="ribbon-outline" onPress={() => onAbrirDocumento(d.id)} />
+            ))}
+          </Grupo>
+          <Grupo icono="folder-open-outline" titulo={`Documentación (${nodo.documentos.length})`} vacio="Sin documentos cargados.">
+            {nodo.documentos.map((d) => (
+              <FilaDocumento key={d.id} documento={d} icono="document-attach-outline" onPress={() => onAbrirDocumento(d.id)} />
+            ))}
+          </Grupo>
+          <Grupo icono="git-branch-outline" titulo={`Convenios hijos (${nodo.hijos.length})`} vacio="No tiene convenios hijos.">
+            {nodo.hijos.map((hijo) => (
+              <View key={hijo.convenio.id} style={{ gap: spacing.xs }}>
                 <AppText variant="label" color="textMuted">
                   {hijo.tipo_vinculo ? TIPOS_VINCULO_INVERSO[hijo.tipo_vinculo] : 'Convenio hijo'}
                 </AppText>
+                <Nodo
+                  nodo={hijo}
+                  marcarCoincidencias={marcarCoincidencias}
+                  desplegado={desplegado}
+                  onAbrirConvenio={onAbrirConvenio}
+                  onAbrirDocumento={onAbrirDocumento}
+                />
               </View>
-              <Nodo
-                nodo={hijo}
-                marcarCoincidencias={marcarCoincidencias}
-                onAbrirConvenio={onAbrirConvenio}
-                onAbrirDocumento={onAbrirDocumento}
-              />
-            </View>
-          ))}
+            ))}
+          </Grupo>
         </View>
       )}
     </View>
   );
 }
 
-function Grupo({ icono, titulo, children }: { icono: IconName; titulo: string; children: ReactNode }) {
+function Grupo({ icono, titulo, vacio, children }: { icono: IconName; titulo: string; vacio: string; children: ReactNode[] }) {
   const { spacing } = useAppTheme();
   return (
     <View style={{ gap: spacing.sm }}>
@@ -149,7 +185,13 @@ function Grupo({ icono, titulo, children }: { icono: IconName; titulo: string; c
           {titulo}
         </AppText>
       </View>
-      {children}
+      {children.length ? (
+        children
+      ) : (
+        <AppText variant="caption" color="textMuted" style={{ paddingLeft: spacing.lg }}>
+          {vacio}
+        </AppText>
+      )}
     </View>
   );
 }

@@ -150,7 +150,7 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
       'Escribí parte del código (ej: CONV-2026), del título o del resumen.',
       'Elegí filtros: año, tipo, estado, unidad académica o vigencia. Tocá "Todos" para sacar uno, o "Limpiar" para sacarlos todos.',
       'Los resultados salen en árbol: el convenio padre arriba y, adentro, sus resoluciones, su documentación y sus convenios hijos.',
-      'Tocá la flecha para plegar o desplegar una rama. Tocá un convenio para abrir su ficha, o un documento para verlo.',
+      'Tocá la flecha de la derecha para desplegar todo el árbol (con los hijos ya abiertos) o para plegarlo. Tocá el resto de la tarjeta para abrir la ficha del convenio, o un documento para verlo.',
     ],
     consejos: [
       'El buscador del encabezado de cada pestaña te trae directo acá.',
