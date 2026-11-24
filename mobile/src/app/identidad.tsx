@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Avatar, Button, Card } from '@/components/atoms';
+import { AppText, Avatar, Badge, Button, Card } from '@/components/atoms';
 import { Banner, FIRMA_VACIA, FirmaPreview, IdentidadCard, puntosDeFirma, SignaturePad } from '@/components/molecules';
 import { Screen } from '@/components/templates';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +10,7 @@ import type { FirmaDibujada } from '@/models';
 import { autenticarConBiometria, obtenerBiometria } from '@/services/biometrics';
 import { tomarSelfie } from '@/services/camara.service';
 import { identidadService } from '@/services/identidad.service';
+import { reconocerRostro } from '@/services/rostro.service';
 import { useAppTheme } from '@/theme';
 import { confirmar, mensajeDeError } from '@/utils/confirm';
 
@@ -21,7 +22,7 @@ const PUNTOS_MINIMOS = 10;
 /**
  * Registrar mi identidad: la persona registra su firma, su rostro y su huella.
  * - Firma: se dibuja en un recuadro y queda guardada (después se puede usar al firmar un convenio).
- * - Rostro: foto con la cámara delantera.
+ * - Rostro: foto con la cámara delantera; el reconocimiento facial (rostro.service.ts) comprueba que haya un rostro válido.
  * - Huella: se verifica con el sensor del celular.
  * Antes de guardar la firma o el rostro se confirma con la biometría, así nadie registra datos de otro.
  * Todo queda solo en este celular (identidad.service.ts).
@@ -36,7 +37,7 @@ export default function IdentidadScreen() {
   const [editandoFirma, setEditandoFirma] = useState(false);
   const [firma, setFirma] = useState<FirmaDibujada>(FIRMA_VACIA);
   const [ocupado, setOcupado] = useState<Dato | null>(null);
-  const [aviso, setAviso] = useState<{ tono: 'success' | 'danger'; texto: string } | null>(null);
+  const [aviso, setAviso] = useState<{ tono: 'success' | 'warning' | 'danger'; texto: string } | null>(null);
 
   const datos = identidad.data;
   const registrados = [datos?.firma, datos?.rostro, datos?.huella].filter(Boolean).length;
@@ -50,14 +51,15 @@ export default function IdentidadScreen() {
   }
 
   /** Ejecuta una acción de registro: muestra "cargando", el resultado y recarga los datos. */
-  async function registrar(dato: Dato, accion: () => Promise<boolean>, mensajeOk: string) {
+  async function registrar(dato: Dato, accion: () => Promise<boolean | string>, mensajeOk: string) {
     if (!usuario) return;
     setAviso(null);
     setOcupado(dato);
     try {
+      // true: salió bien. Un texto: se guardó, pero con una advertencia. false: se canceló.
       const hecho = await accion();
       if (hecho) {
-        setAviso({ tono: 'success', texto: mensajeOk });
+        setAviso(typeof hecho === 'string' ? { tono: 'warning', texto: hecho } : { tono: 'success', texto: mensajeOk });
         identidad.reload();
       }
     } catch (e) {
@@ -87,13 +89,18 @@ export default function IdentidadScreen() {
       async () => {
         const foto = await tomarSelfie();
         if (!foto) return false; // canceló la cámara
+        // Primero el reconocimiento: si la foto no sirve, se avisa por qué y no se guarda nada.
+        const resultado = await reconocerRostro(foto);
         if (!(await confirmarQueSosVos('Confirmá que sos vos para guardar tu rostro'))) {
           throw new Error('No se confirmó tu identidad, así que la foto no se guardó.');
         }
-        await identidadService.guardarRostro(usuarioId, foto);
-        return true;
+        const reconocido = resultado.estado === 'reconocido';
+        await identidadService.guardarRostro(usuarioId, foto.uri, reconocido);
+        return reconocido
+          ? true
+          : 'Guardamos tu foto, pero no se pudo reconocer el rostro: el reconocimiento facial funciona en la app instalada, no en Expo Go.';
       },
-      'Tu rostro quedó registrado.',
+      'Reconocimos tu rostro y quedó registrado.',
     );
 
   const registrarHuella = () =>
@@ -185,12 +192,22 @@ export default function IdentidadScreen() {
       <IdentidadCard
         icon="happy-outline"
         titulo="Reconocimiento facial"
-        descripcion="Una foto de tu rostro con la cámara delantera: de frente, con buena luz y sin anteojos de sol."
+        descripcion="Una foto de tu rostro con la cámara delantera: de frente, cerca, con buena luz y sin anteojos de sol. La app comprueba que se vea bien tu cara."
         registradoEn={datos?.rostro?.registrado_en ?? null}>
         {datos?.rostro && usuario && (
-          <View style={{ alignItems: 'center' }}>
+          <View style={{ alignItems: 'center', gap: spacing.sm }}>
             <Avatar name={usuario.nombre} uri={datos.rostro.foto} size={112} />
+            {datos.rostro.reconocido ? (
+              <Badge label="Rostro reconocido" tone="success" icon="scan-outline" />
+            ) : (
+              <Badge label="Rostro sin verificar" tone="warning" icon="alert-circle-outline" />
+            )}
           </View>
+        )}
+        {datos?.rostro && !datos.rostro.reconocido && (
+          <AppText variant="caption" color="textSecondary">
+            Esta foto se guardó sin reconocimiento facial. Volvé a registrar tu rostro desde la app instalada para verificarlo.
+          </AppText>
         )}
         <Button
           title={datos?.rostro ? 'Volver a registrar mi rostro' : 'Registrar mi rostro'}

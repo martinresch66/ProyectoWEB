@@ -5,7 +5,8 @@ import type { FirmaDibujada, IdentidadRegistrada } from '@/models';
 /** Cómo queda guardado en el archivo (la foto se guarda por nombre, no por dirección completa). */
 interface IdentidadGuardada {
   firma: IdentidadRegistrada['firma'];
-  rostro: { archivo: string; registrado_en: string } | null;
+  /** `reconocido` falta en lo guardado antes del reconocimiento facial: cuenta como no reconocido. */
+  rostro: { archivo: string; registrado_en: string; reconocido?: boolean } | null;
   huella: IdentidadRegistrada['huella'];
 }
 
@@ -55,7 +56,10 @@ export const identidadService = {
     const foto = datos.rostro ? new File(carpeta(), datos.rostro.archivo) : null;
     return {
       firma: datos.firma,
-      rostro: datos.rostro && foto?.exists ? { foto: foto.uri, registrado_en: datos.rostro.registrado_en } : null,
+      rostro:
+        datos.rostro && foto?.exists
+          ? { foto: foto.uri, registrado_en: datos.rostro.registrado_en, reconocido: datos.rostro.reconocido === true }
+          : null,
       huella: datos.huella,
     };
   },
@@ -66,12 +70,12 @@ export const identidadService = {
   },
 
   /** Copia la foto que sacó la cámara (está en el caché) a la carpeta privada, con un nombre nuevo. */
-  async guardarRostro(usuarioId: number, fotoTemporal: string): Promise<void> {
+  async guardarRostro(usuarioId: number, fotoTemporal: string, reconocido: boolean): Promise<void> {
     const datos = await leer(usuarioId);
     const nombre = `usuario-${usuarioId}-rostro-${Date.now()}.jpg`;
     await new File(fotoTemporal).copy(new File(carpeta(), nombre));
     borrarFoto(datos.rostro?.archivo);
-    await escribir(usuarioId, { ...datos, rostro: { archivo: nombre, registrado_en: ahora() } });
+    await escribir(usuarioId, { ...datos, rostro: { archivo: nombre, registrado_en: ahora(), reconocido } });
   },
 
   async guardarHuella(usuarioId: number, tipo: string): Promise<void> {

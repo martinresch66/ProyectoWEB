@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 
 import { cargarModulo } from './nativo';
+import type { FotoRostro } from './rostro.service';
 
 type ImagePickerModule = typeof import('expo-image-picker');
 
@@ -15,9 +16,9 @@ function picker(): ImagePickerModule | null {
 
 /**
  * Abre la cámara delantera para sacar una foto cuadrada del rostro.
- * Devuelve la dirección de la foto (en el caché) o null si la persona canceló.
+ * Devuelve la foto (dirección en el caché y tamaño, para el reconocimiento facial) o null si la persona canceló.
  */
-export async function tomarSelfie(): Promise<string | null> {
+export async function tomarSelfie(): Promise<FotoRostro | null> {
   const ImagePicker = picker();
   if (!ImagePicker) throw new CamaraError('Este dispositivo no tiene cámara disponible.');
 
@@ -37,8 +38,8 @@ export async function tomarSelfie(): Promise<string | null> {
     aspect: [1, 1],
     quality: 0.6,
   });
-  if (resultado.canceled) return null;
-  return resultado.assets[0]?.uri ?? null;
+  const foto = resultado.canceled ? undefined : resultado.assets[0];
+  return foto ? { uri: foto.uri, ancho: foto.width, alto: foto.height } : null;
 }
 
 /** De dónde sale la foto de perfil. */
