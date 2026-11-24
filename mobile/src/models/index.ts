@@ -1,3 +1,4 @@
+export * from './busqueda';
 export * from './comentario';
 export * from './convenio';
 export * from './documento';

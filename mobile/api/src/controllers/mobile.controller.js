@@ -1,3 +1,4 @@
+import { busquedaService } from '../services/busqueda.service.js';
 import { conveniosService } from '../services/convenios.service.js';
 import { documentosService } from '../services/documentos.service.js';
 import { firmaService } from '../services/firma.service.js';
@@ -16,6 +17,11 @@ export const mobileController = {
   /** GET /mobile/resumen/:indicador → los convenios de un box del Inicio (firmados, vigentes, en_tramite…). */
   indicador(req, res) {
     res.json(resumenService.listar(req.user, req.params.indicador));
+  },
+
+  /** GET /mobile/buscar?q=&anio=&tipo=&estado=&unidad_id=&vigencia= → resultados en árbol (padre → hijos, resoluciones y documentos). */
+  buscar(req, res) {
+    res.json(busquedaService.buscar(req.user, req.query));
   },
 
   /** GET /mobile/novedades?desde=ISO → lo que pasó desde esa fecha, para las notificaciones de la app. */

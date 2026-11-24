@@ -145,12 +145,17 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
   buscar: {
     titulo: 'Buscar',
     icono: 'search-outline',
-    resumen: 'Encontrá un convenio por su código, su título o su resumen.',
+    resumen: 'Encontrá convenios por texto y filtros, y mirá cada uno con su convenio padre, sus hijos, resoluciones y documentos.',
     pasos: [
       'Escribí parte del código (ej: CONV-2026), del título o del resumen.',
-      'Tocá un resultado para abrir la ficha del convenio.',
+      'Elegí filtros: año, tipo, estado, unidad académica o vigencia. Tocá "Todos" para sacar uno, o "Limpiar" para sacarlos todos.',
+      'Los resultados salen en árbol: el convenio padre arriba y, adentro, sus resoluciones, su documentación y sus convenios hijos.',
+      'Tocá la flecha para plegar o desplegar una rama. Tocá un convenio para abrir su ficha, o un documento para verlo.',
     ],
-    consejos: ['El buscador del encabezado de cada pestaña te trae directo acá.'],
+    consejos: [
+      'El buscador del encabezado de cada pestaña te trae directo acá.',
+      'Lo marcado con "Coincide" cumple tu búsqueda; el resto aparece para que veas la familia completa.',
+    ],
   },
   firmar: {
     titulo: 'Por firmar',

@@ -30,6 +30,34 @@ export const conveniosRepository = {
     return { ...c, unidad: unidadesRepository.findById(c.unidad_id) };
   },
 
+  /** Documentos del convenio (sin la ruta del archivo en el servidor), del más nuevo al más viejo. */
+  documentosDe(convenioId) {
+    return db.documentos
+      .filter((d) => d.convenio_id === convenioId)
+      .sort(masNuevoPrimero)
+      // eslint-disable-next-line no-unused-vars
+      .map(({ ruta_archivo, ...d }) => ({ ...d, usuario: usuariosRepository.resumen(d.subido_por) }));
+  },
+
+  /**
+   * Convenio padre: en vinculos_convenio el origen es el hijo y el destino el padre
+   * (ej: el específico 2 es "especifico_de" el marco 1). Devuelve { convenio, tipo_vinculo } o null.
+   */
+  padreDe(convenioId) {
+    const v = db.vinculos_convenio.find((x) => x.convenio_origen_id === convenioId);
+    const padre = v ? this.findById(v.convenio_destino_id) : null;
+    return padre ? { convenio: padre, tipo_vinculo: v.tipo_vinculo } : null;
+  },
+
+  /** Convenios hijos (específicos, adendas, renovaciones…): [{ convenio, tipo_vinculo }], por código. */
+  hijosDe(convenioId) {
+    return db.vinculos_convenio
+      .filter((x) => x.convenio_destino_id === convenioId)
+      .map((x) => ({ convenio: this.findById(x.convenio_origen_id), tipo_vinculo: x.tipo_vinculo }))
+      .filter((h) => h.convenio)
+      .sort((a, b) => a.convenio.codigo.localeCompare(b.convenio.codigo));
+  },
+
   /** Ficha completa con relaciones (§4 GET /agreements/{id}). */
   ficha(c) {
     const detalle = db.detalles_pasantia.find((d) => d.convenio_id === c.id);
@@ -56,11 +84,7 @@ export const conveniosRepository = {
       vinculos_destino: db.vinculos_convenio
         .filter((v) => v.convenio_destino_id === c.id)
         .map((v) => ({ ...v, convenio_origen: resumen(this.findById(v.convenio_origen_id)) })),
-      documentos: db.documentos
-        .filter((d) => d.convenio_id === c.id)
-        .sort(masNuevoPrimero)
-        // eslint-disable-next-line no-unused-vars
-        .map(({ ruta_archivo, ...d }) => ({ ...d, usuario: usuariosRepository.resumen(d.subido_por) })),
+      documentos: this.documentosDe(c.id),
       transiciones: db.transiciones_estado
         .filter((t) => t.convenio_id === c.id)
         .sort(masNuevoPrimero)

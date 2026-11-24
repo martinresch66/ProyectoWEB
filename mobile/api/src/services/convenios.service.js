@@ -22,19 +22,7 @@ function validarFiltros(p) {
  */
 export const conveniosService = {
   listar(usuario, p = {}) {
-    validarFiltros(p);
-    const texto = normalize(p.q);
-    const todos = conveniosRepository
-      .findAll()
-      .filter((c) => esVisible(usuario, c))
-      .filter((c) => !texto || [c.codigo, c.titulo, c.resumen].some((v) => normalize(v).includes(texto)))
-      .filter((c) => !p.tipo || c.tipo === p.tipo)
-      .filter((c) => !p.estado || c.estado === p.estado)
-      .filter((c) => !p.unidad_id || c.unidad_id === Number(p.unidad_id))
-      .filter((c) => !p.vigencia || calcularVigencia(c) === p.vigencia)
-      .filter((c) => !p.desde || (c.fecha_inicio && c.fecha_inicio >= p.desde))
-      .filter((c) => !p.hasta || (c.fecha_inicio && c.fecha_inicio <= p.hasta))
-      .sort((a, b) => b.codigo.localeCompare(a.codigo));
+    const todos = this.filtrar(usuario, p);
 
     // Paginador con la forma de Laravel (paginate()).
     const porPagina = Math.min(Math.max(Number(p.per_page) || 15, 1), 100);
@@ -47,6 +35,23 @@ export const conveniosService = {
       per_page: porPagina,
       total: todos.length,
     };
+  },
+
+  /** Todos los convenios visibles para el usuario que cumplen los filtros, sin paginar (también lo usa el buscador avanzado). */
+  filtrar(usuario, p = {}) {
+    validarFiltros(p);
+    const texto = normalize(p.q);
+    return conveniosRepository
+      .findAll()
+      .filter((c) => esVisible(usuario, c))
+      .filter((c) => !texto || [c.codigo, c.titulo, c.resumen].some((v) => normalize(v).includes(texto)))
+      .filter((c) => !p.tipo || c.tipo === p.tipo)
+      .filter((c) => !p.estado || c.estado === p.estado)
+      .filter((c) => !p.unidad_id || c.unidad_id === Number(p.unidad_id))
+      .filter((c) => !p.vigencia || calcularVigencia(c) === p.vigencia)
+      .filter((c) => !p.desde || (c.fecha_inicio && c.fecha_inicio >= p.desde))
+      .filter((c) => !p.hasta || (c.fecha_inicio && c.fecha_inicio <= p.hasta))
+      .sort((a, b) => b.codigo.localeCompare(a.codigo));
   },
 
   obtener(usuario, id) {

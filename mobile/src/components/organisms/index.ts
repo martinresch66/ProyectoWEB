@@ -6,3 +6,4 @@ export * from './FirmaModal';
 export * from './VisorPdf';
 export * from './AyudaModal';
 
+export * from './ArbolConvenios';

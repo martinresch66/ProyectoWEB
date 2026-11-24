@@ -19,3 +19,4 @@ export * from './ComentarioItem';
 export * from './NovedadItem';
 export * from './Desplegable';
 export * from './ListaPasos';
+export * from './SelectorFiltro';
