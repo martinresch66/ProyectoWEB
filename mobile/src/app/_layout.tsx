@@ -70,6 +70,7 @@ function RootNavigator() {
           <Stack.Screen name="convenio/[id]" options={{ title: 'Ficha del convenio', headerRight: () => <BotonAyuda seccion="convenio" /> }} />
           <Stack.Screen name="documento/[id]" options={{ title: 'Documento', headerRight: () => <BotonAyuda seccion="documento" /> }} />
           <Stack.Screen name="indicador/[clave]" options={{ title: 'Convenios', headerRight: () => <BotonAyuda seccion="inicio" /> }} />
+          <Stack.Screen name="escuchar/[id]" options={{ title: 'Escuchar convenio', headerRight: () => <BotonAyuda seccion="escuchar" /> }} />
           <Stack.Screen name="comentarios/[id]" options={{ title: 'Comentarios', headerRight: () => <BotonAyuda seccion="comentarios" /> }} />
           <Stack.Screen name="subir/[id]" options={{ title: 'Subir documentación', headerRight: () => <BotonAyuda seccion="subir" /> }} />
           <Stack.Screen name="archivo/[id]" options={{ title: 'Documento', headerRight: () => <BotonAyuda seccion="archivo" /> }} />

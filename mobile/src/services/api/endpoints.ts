@@ -27,6 +27,7 @@ export const ENDPOINTS = {
   novedades: '/mobile/novedades',
   buscar: '/mobile/buscar',
   pdfConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/pdf`,
+  lectura: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/lectura`,
   firmaConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/firma`,
   comentarios: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/comentarios`,
   documentosConvenio: (convenioId: number | string) => `/mobile/convenios/${id(convenioId)}/documentos`,

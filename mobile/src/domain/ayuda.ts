@@ -17,7 +17,8 @@ export type SeccionAyuda =
   | 'subir'
   | 'archivo'
   | 'avisos'
-  | 'identidad';
+  | 'identidad'
+  | 'escuchar';
 
 export interface Ayuda {
   titulo: string;
@@ -192,6 +193,7 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
     resumen: 'Todos los datos del convenio: estado, vigencia, partes, documentos e historial.',
     pasos: [
       '"Leer y firmar" (o "Ver el documento") abre el PDF del convenio.',
+      '"Escuchar el convenio" lo lee en voz alta, cláusula por cláusula.',
       '"Comentarios" abre la conversación sobre este convenio.',
       'En "Documentos" tocá uno para ver su detalle. Con "Subir PDF" agregás documentación (si tu rol puede).',
       '"Historial" muestra cada cambio de estado, quién lo hizo y cuándo.',
@@ -256,5 +258,23 @@ export const AYUDAS: Record<SeccionAyuda, Ayuda> = {
       'Cada paso se confirma con tu huella.',
     ],
     consejos: ['El manual completo tiene el paso a paso y qué hacer si algo falla.'],
+  },
+  escuchar: {
+    titulo: 'Escuchar el convenio',
+    icono: 'headset-outline',
+    resumen: 'El celular te lee el convenio en voz alta: el mismo documento que se firma, cláusula por cláusula.',
+    pasos: [
+      'Tocá el botón grande para empezar. Al terminar una sección sigue sola con la próxima.',
+      'Con las flechas pasás a la sección anterior o a la siguiente.',
+      'En "Secciones" tocá cualquier cláusula para escucharla directamente.',
+      'Elegí la velocidad: 0,75x más lento, 1,5x más rápido.',
+      'Abajo del reproductor ves el texto de la sección, para seguirlo con la vista.',
+    ],
+    consejos: [
+      'Usa la voz del celular, así que funciona aunque estés con datos limitados (solo necesita conexión para cargar el texto).',
+      'Si cambiás la velocidad o pausás, sigue desde la palabra en la que iba (no vuelve al principio de la sección).',
+      'Si salís de la pantalla, la lectura se pausa. Al volver, tocá el botón para seguir desde donde quedó.',
+      'Si se escucha con acento extranjero, instalá la voz en español en Ajustes > Accesibilidad > Texto a voz.',
+    ],
   },
 };

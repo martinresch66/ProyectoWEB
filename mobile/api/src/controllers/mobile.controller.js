@@ -2,6 +2,7 @@ import { busquedaService } from '../services/busqueda.service.js';
 import { conveniosService } from '../services/convenios.service.js';
 import { documentosService } from '../services/documentos.service.js';
 import { firmaService } from '../services/firma.service.js';
+import { lecturaService } from '../services/lectura.service.js';
 import { generarPdfConvenio } from '../services/pdfConvenio.service.js';
 import { novedadesService } from '../services/novedades.service.js';
 import { resumenService } from '../services/resumen.service.js';
@@ -38,6 +39,11 @@ export const mobileController = {
     const ficha = conveniosService.obtener(req.user, req.params.id);
     const bytes = (await firmaService.pdfGuardado(ficha.id)) ?? Buffer.from(await generarPdfConvenio(ficha));
     res.type('application/pdf').set('Content-Disposition', `inline; filename="${ficha.codigo}.pdf"`).send(bytes);
+  },
+
+  /** GET /mobile/convenios/:id/lectura → el texto del PDF del convenio, en secciones, para escucharlo en voz alta. */
+  async lectura(req, res) {
+    res.json(await lecturaService.obtener(req.user, req.params.id));
   },
 
   /** GET /mobile/convenios/:id/firma → quién, cuándo y dónde se firmó desde la app ({ firma: null } si no). */

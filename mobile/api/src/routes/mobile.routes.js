@@ -13,6 +13,7 @@ mobileRouter.get('/resumen/:indicador', mobileController.indicador);
 mobileRouter.get('/novedades', mobileController.novedades);
 mobileRouter.get('/buscar', mobileController.buscar);
 mobileRouter.get('/convenios/:id/pdf', mobileController.pdfConvenio);
+mobileRouter.get('/convenios/:id/lectura', mobileController.lectura);
 mobileRouter.get('/convenios/:id/firma', mobileController.firma);
 mobileRouter.post('/convenios/:id/firma', mobileController.firmar);
 mobileRouter.get('/convenios/:id/comentarios', mobileController.comentarios);

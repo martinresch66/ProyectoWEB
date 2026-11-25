@@ -116,6 +116,12 @@ export default function ConvenioDetalleScreen() {
         variant={puedeFirmar ? 'primary' : 'secondary'}
         onPress={() => router.push({ pathname: '/documento/[id]', params: { id: String(c.id) } })}
       />
+      <Button
+        title="Escuchar el convenio"
+        icon="headset-outline"
+        variant="secondary"
+        onPress={() => router.push({ pathname: '/escuchar/[id]', params: { id: String(c.id) } })}
+      />
 
       <Card style={{ paddingVertical: spacing.xs }}>
         <ListItem
